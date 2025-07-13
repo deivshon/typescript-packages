@@ -2,11 +2,13 @@ import { shallowEq, useStore } from "react-store"
 import { globalStore } from "../lib/global-store"
 
 export const RootPage = () => {
-    const titleCount = useStore(globalStore, (state) => ({ title: state.title }), shallowEq)
+    const title = useStore(globalStore, (state) => ({ title: state.title }), shallowEq)
+    const description = useStore(globalStore, (state) => state.description)
 
     return (
         <div>
-            <h1>{titleCount.title}</h1>
+            <h1>{title.title}</h1>
+            <p>{description}</p>
             <RootPageCounter />
         </div>
     )

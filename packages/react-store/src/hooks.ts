@@ -1,12 +1,13 @@
 import { useRef, useSyncExternalStore } from "react"
 import { Store } from "./store"
 
-export const useWhole = <T extends Record<string, unknown>>(store: Store<T>): T =>
-    useSyncExternalStore(store.subscribe, () => store.get())
+export const useWhole = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>>(
+    store: Store<TState, TDerived>,
+): TState => useSyncExternalStore(store.subscribe, () => store.get())
 
-export const useStore = <T extends Record<string, unknown>, S>(
-    store: Store<T>,
-    selector: (state: T) => S,
+export const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, S>(
+    store: Store<TState, TDerived>,
+    selector: (state: TState & TDerived) => S,
     eq: (prev: S, current: S) => boolean = Object.is,
 ): S => {
     const lastSelectedRef = useRef<S | null>(null)

@@ -1,14 +1,19 @@
-export type Store<T extends Record<string, unknown>> = {
-    get: () => Readonly<T>
-    set: (update: Partial<T> | ((prev: Readonly<T>) => Partial<T>)) => void
-    subscribe: (callback: (state: Readonly<T>) => void) => () => void
+export type Store<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = {
+    get: () => Readonly<TState & TDerived>
+    set: (update: Partial<TState> | ((prev: Readonly<TState & TDerived>) => Partial<TState>)) => void
+    subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
 }
 
-export const createStore = <T extends Record<string, unknown>>(initial: (set: Store<T>["set"]) => T): Store<T> => {
-    let state: T
+export const createStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>>(
+    initial: (set: Store<TState, TDerived>["set"]) => TState,
+    derive: (state: TState) => TDerived,
+): Store<TState, TDerived> => {
+    let state: TState
+    let derived: TDerived
+    let data: TState & TDerived
 
-    const listeners = new Set<(state: Readonly<T>) => void>()
-    const subscribe: Store<T>["subscribe"] = (callback) => {
+    const listeners = new Set<(state: Readonly<TState & TDerived>) => void>()
+    const subscribe: Store<TState, TDerived>["subscribe"] = (callback) => {
         listeners.add(callback)
 
         return () => {
@@ -16,21 +21,34 @@ export const createStore = <T extends Record<string, unknown>>(initial: (set: St
         }
     }
 
-    const get: Store<T>["get"] = () => state
-    const set: Store<T>["set"] = (update) => {
-        const normalizedUpdate = update instanceof Function ? update(state) : update
+    const get: Store<TState, TDerived>["get"] = () => data
+    const set: Store<TState, TDerived>["set"] = (update) => {
+        const normalizedUpdate = update instanceof Function ? update(data) : update
+        if (Object.is(normalizedUpdate, state)) {
+            return
+        }
 
         state = {
             ...state,
             ...normalizedUpdate,
         }
+        derived = derive(state)
+        data = {
+            ...state,
+            ...derived,
+        }
 
         for (const listenerFn of listeners) {
-            listenerFn(state)
+            listenerFn(data)
         }
     }
 
     state = initial(set)
+    derived = derive(state)
+    data = {
+        ...state,
+        ...derived,
+    }
 
     return {
         get,

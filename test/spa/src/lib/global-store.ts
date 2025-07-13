@@ -1,18 +1,27 @@
 import { createStore } from "react-store"
 
-type GlobalStore = {
+type GlobalStoreState = {
     title: string
     setTitle: (title: string) => void
     count: number
     setCount: (count: number) => void
 }
 
-export const globalStore = createStore<GlobalStore>((set) => ({
-    title: "global",
-    setTitle: (title) => set({ title }),
-    count: 0,
-    setCount: (count) =>
-        set({
-            count,
-        }),
-}))
+type GlobalStoreDerived = {
+    description: string
+}
+
+export const globalStore = createStore<GlobalStoreState, GlobalStoreDerived>(
+    (set) => ({
+        title: "global",
+        setTitle: (title) => set({ title }),
+        count: 0,
+        setCount: (count) =>
+            set({
+                count,
+            }),
+    }),
+    (state) => ({
+        description: `Count has been clicked ${state.count} times!`,
+    }),
+)
