@@ -1,4 +1,4 @@
-import { createStore } from "react-store"
+import { createStore, useStore, type UseStore } from "react-store"
 
 type SimpleStore = {
     number: number
@@ -12,3 +12,5 @@ export const simpleStore = createStore<SimpleStore>((set) => ({
             number: Math.floor(Math.random() * 100),
         }),
 }))
+
+export const useSimpleStore: UseStore<typeof simpleStore> = (selector) => useStore(simpleStore, selector)

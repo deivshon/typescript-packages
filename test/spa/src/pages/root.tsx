@@ -1,6 +1,6 @@
 import { shallowEq, useStore } from "react-store"
-import { globalStore } from "../lib/global-store"
-import { simpleStore } from "../lib/simple-store"
+import { globalStore, useGlobalStore } from "../lib/global-store"
+import { useSimpleStore } from "../lib/simple-store"
 
 export const RootPage = () => {
     const title = useStore(globalStore, (state) => ({ title: state.title }), shallowEq)
@@ -17,9 +17,9 @@ export const RootPage = () => {
 }
 
 const RootPageCounter = () => {
-    const count = useStore(globalStore, (state) => state.count)
-    const setCount = useStore(globalStore, (state) => state.setCount)
-    const setTitle = useStore(globalStore, (state) => state.setTitle)
+    const count = useGlobalStore((state) => state.count)
+    const setCount = useGlobalStore((state) => state.setCount)
+    const setTitle = useGlobalStore((state) => state.setTitle)
 
     const onCountIncrement = () => {
         const newCount = count + 1
@@ -41,8 +41,8 @@ const RootPageCounter = () => {
 }
 
 const RootPageRandomNumber = () => {
-    const random = useStore(simpleStore, (state) => state.number)
-    const randomize = useStore(simpleStore, (state) => state.randomize)
+    const random = useSimpleStore((state) => state.number)
+    const randomize = useSimpleStore((state) => state.randomize)
 
     return (
         <div>

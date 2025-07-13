@@ -1,4 +1,4 @@
-import { createStoreWithDerived } from "react-store"
+import { createStoreWithDerived, useStore, type UseStore } from "react-store"
 
 type GlobalStoreState = {
     title: string
@@ -25,3 +25,5 @@ export const globalStore = createStoreWithDerived<GlobalStoreState, GlobalStoreD
         description: `Count has been clicked ${state.count} times!`,
     }),
 )
+
+export const useGlobalStore: UseStore<typeof globalStore> = (selector) => useStore(globalStore, selector)
