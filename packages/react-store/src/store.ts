@@ -61,5 +61,5 @@ export const createStoreWithDerived = <
 }
 
 export const createStore = <TState extends Record<string, unknown>>(
-    initial: (set: Store<TState, Record<string, never>>["set"]) => TState,
-) => createStoreWithDerived<TState, Record<string, never>>(initial, () => ({}))
+    initial: (set: Store<TState, Record<never, never>>["set"]) => TState,
+) => createStoreWithDerived<TState, Record<never, never>>(initial, () => ({}))
