@@ -5,12 +5,12 @@ export const useWhole = <TState extends Record<string, unknown>, TDerived extend
     store: Store<TState, TDerived>,
 ): TState => useSyncExternalStore(store.subscribe, () => store.get())
 
-export const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, S>(
+export const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
     store: Store<TState, TDerived>,
-    selector: (state: TState & TDerived) => S,
-    eq: (prev: S, current: S) => boolean = Object.is,
-): S => {
-    const lastSelectedRef = useRef<S | null>(null)
+    selector: (state: TState & TDerived) => TSelected,
+    eq: (prev: TSelected, current: TSelected) => boolean = Object.is,
+): TSelected => {
+    const lastSelectedRef = useRef<TSelected | null>(null)
 
     return useSyncExternalStore(store.subscribe, () => {
         const selected = selector(store.get())
