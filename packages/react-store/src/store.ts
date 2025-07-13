@@ -4,7 +4,10 @@ export type Store<TState extends Record<string, unknown>, TDerived extends Recor
     subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
 }
 
-export const createStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>>(
+export const createStoreWithDerived = <
+    TState extends Record<string, unknown>,
+    TDerived extends Record<string, unknown>,
+>(
     initial: (set: Store<TState, TDerived>["set"]) => TState,
     derive: (state: TState) => TDerived,
 ): Store<TState, TDerived> => {
@@ -56,3 +59,7 @@ export const createStore = <TState extends Record<string, unknown>, TDerived ext
         subscribe,
     }
 }
+
+export const createStore = <TState extends Record<string, unknown>>(
+    initial: (set: Store<TState, Record<string, never>>["set"]) => TState,
+) => createStoreWithDerived<TState, Record<string, never>>(initial, () => ({}))

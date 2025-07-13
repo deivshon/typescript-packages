@@ -1,4 +1,4 @@
-import { createStore } from "react-store"
+import { createStoreWithDerived } from "react-store"
 
 type GlobalStoreState = {
     title: string
@@ -11,7 +11,7 @@ type GlobalStoreDerived = {
     description: string
 }
 
-export const globalStore = createStore<GlobalStoreState, GlobalStoreDerived>(
+export const globalStore = createStoreWithDerived<GlobalStoreState, GlobalStoreDerived>(
     (set) => ({
         title: "global",
         setTitle: (title) => set({ title }),
