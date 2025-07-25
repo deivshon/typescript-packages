@@ -1,10 +1,10 @@
-import { shallowEq, useStore } from "react-store"
-import { globalStore, useGlobalStore } from "../lib/global-store"
+import { shallowEq } from "react-store"
+import { useGlobalStore } from "../lib/global-store"
 import { useSimpleStore } from "../lib/simple-store"
 
 export const RootPage = () => {
-    const title = useStore(globalStore, (state) => ({ title: state.title }), shallowEq)
-    const description = useStore(globalStore, (state) => state.description)
+    const title = useGlobalStore((state) => ({ title: state.title }), shallowEq)
+    const description = useGlobalStore((state) => state.description)
 
     return (
         <div>

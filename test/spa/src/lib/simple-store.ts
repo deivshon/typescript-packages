@@ -1,4 +1,4 @@
-import { createStore, useStore, type UseStore } from "react-store"
+import { createStore, createStoreHook } from "react-store"
 
 type SimpleStore = {
     number: number
@@ -13,4 +13,4 @@ export const simpleStore = createStore<SimpleStore>((set) => ({
         }),
 }))
 
-export const useSimpleStore: UseStore<typeof simpleStore> = (selector) => useStore(simpleStore, selector)
+export const useSimpleStore = createStoreHook(simpleStore)

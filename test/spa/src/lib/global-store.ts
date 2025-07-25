@@ -1,4 +1,4 @@
-import { createStoreWithDerived, useStore, type UseStore } from "react-store"
+import { createStoreHook, createStoreWithDerived } from "react-store"
 
 type GlobalStoreState = {
     title: string
@@ -26,4 +26,4 @@ export const globalStore = createStoreWithDerived<GlobalStoreState, GlobalStoreD
     }),
 )
 
-export const useGlobalStore: UseStore<typeof globalStore> = (selector) => useStore(globalStore, selector)
+export const useGlobalStore = createStoreHook(globalStore)

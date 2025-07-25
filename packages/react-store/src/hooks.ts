@@ -1,11 +1,7 @@
 import { useRef, useSyncExternalStore } from "react"
 import { Store } from "./store"
 
-export const useWhole = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>>(
-    store: Store<TState, TDerived>,
-): TState => useSyncExternalStore(store.subscribe, () => store.get())
-
-export const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
+const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
     store: Store<TState, TDerived>,
     selector: (state: TState & TDerived) => TSelected,
     eq: (prev: TSelected, current: TSelected) => boolean = Object.is,
@@ -21,4 +17,15 @@ export const useStore = <TState extends Record<string, unknown>, TDerived extend
         lastSelectedRef.current = selected
         return selected
     })
+}
+
+export const createStoreHook = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>>(
+    store: Store<TState, TDerived>,
+) => {
+    const useStoreHook = <TSelected>(
+        selector: (state: TState & TDerived) => TSelected,
+        eq: (prev: TSelected, current: TSelected) => boolean = Object.is,
+    ) => useStore(store, selector, eq)
+
+    return Object.assign<typeof useStoreHook, Store<TState, TDerived>>(useStoreHook, store)
 }
