@@ -1,4 +1,4 @@
-export const shallowEq = (a: unknown, b: unknown): boolean => {
+export const shallowEq = (a: Readonly<unknown>, b: Readonly<unknown>): boolean => {
     if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
         return Object.is(a, b)
     }

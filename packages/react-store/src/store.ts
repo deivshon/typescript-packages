@@ -1,18 +1,18 @@
 import { NoFunctions } from "./helper"
 
 export type Store<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = {
-    get: () => Readonly<TState & TDerived>
-    set: (
+    readonly get: () => Readonly<TState & TDerived>
+    readonly set: (
         update: Partial<NoFunctions<TState>> | ((prev: Readonly<TState & TDerived>) => Partial<NoFunctions<TState>>),
     ) => void
-    subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
+    readonly subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
 }
 
 export type Middleware<TState extends Record<string, unknown>> = {
-    transformInitial?: (state: TState) => TState
-    onInit?: (state: TState) => void
-    transformUpdate?: (update: Partial<NoFunctions<TState>>) => Partial<NoFunctions<TState>>
-    onUpdate?: (update: Partial<NoFunctions<TState>>, updated: TState) => void
+    transformInitial?: (state: Readonly<TState>) => TState
+    onInit?: (state: Readonly<TState>) => void
+    transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
+    onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, updated: Readonly<TState>) => void
 }
 
 export const createStoreWithDerived = <
