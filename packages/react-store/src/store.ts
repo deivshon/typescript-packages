@@ -1,6 +1,10 @@
+import { NoFunctions } from "./helper"
+
 export type Store<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = {
     get: () => Readonly<TState & TDerived>
-    set: (update: Partial<TState> | ((prev: Readonly<TState & TDerived>) => Partial<TState>)) => void
+    set: (
+        update: Partial<NoFunctions<TState>> | ((prev: Readonly<TState & TDerived>) => Partial<NoFunctions<TState>>),
+    ) => void
     subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
 }
 
