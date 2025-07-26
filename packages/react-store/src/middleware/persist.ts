@@ -6,62 +6,52 @@ type Serializer<T> = {
     deserialize: (serialized: string) => T
 }
 
+type Storage = {
+    get: (name: string) => Partial<Record<PropertyKey, unknown>> | null
+    set: (name: string, value: Partial<Record<PropertyKey, unknown>>) => void
+}
+
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
-    serializers: {
-        [TKey in keyof NoFunctions<TState>]?: Serializer<TState[TKey]>
+    persistence: {
+        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, Storage]
     },
 ): Middleware<TState> => {
-    const getStored = (): Partial<Record<PropertyKey, unknown>> | null => {
-        const raw = localStorage.getItem(name)
-        if (!raw) {
+    const getStoredValue = (key: string, storage: Storage): string | null => {
+        const stored = storage.get(name)
+        if (!stored) {
             return null
         }
 
-        try {
-            const parsed: unknown = JSON.parse(raw)
-            if (typeof parsed !== "object" || !parsed) {
-                return null
-            }
-
-            return parsed
-        } catch {
+        const storedValue = stored[key]
+        if (typeof storedValue !== "string") {
             return null
         }
+
+        return storedValue
     }
-    const setStored = (stored: Partial<Record<PropertyKey, unknown>>): void => {
-        const stringified = (() => {
-            try {
-                return JSON.stringify(stored)
-            } catch {
-                return null
-            }
-        })()
-        if (typeof stringified !== "string") {
-            return
-        }
 
-        localStorage.setItem(name, stringified)
+    const setStoredValue = (key: string, value: string, storage: Storage): void => {
+        storage.set(name, {
+            ...(storage.get(name) ?? {}),
+            [key]: value,
+        })
     }
 
     return {
         transformInitial: (state) => {
-            const stored = getStored()
-            if (!stored) {
-                return state
-            }
-
             const transformed: TState = {
                 ...state,
             }
 
-            for (const key in serializers) {
-                const serializer = serializers[key]
-                if (!serializer) {
+            for (const key in persistence) {
+                if (!persistence[key]) {
                     continue
                 }
 
-                const storedValue = stored[key]
+                const [serializer, storage] = persistence[key]
+
+                const storedValue = getStoredValue(key, storage)
                 if (typeof storedValue !== "string") {
                     continue
                 }
@@ -73,21 +63,18 @@ export const persist = <TState extends Record<string, unknown>>(
             return transformed
         },
         onUpdate: (update, newState) => {
-            const newStored = getStored() ?? {}
-
             for (const key in update) {
                 const updatedValue = newState[key]
 
-                const serializer = serializers[key]
-                if (!serializer) {
+                if (!persistence[key]) {
                     continue
                 }
 
+                const [serializer, storage] = persistence[key]
                 const serialized = serializer.serialize(updatedValue)
-                newStored[key] = serialized
-            }
 
-            setStored(newStored)
+                setStoredValue(key, serialized, storage)
+            }
         },
     }
 }
@@ -105,5 +92,50 @@ export const serde = (() => {
     return {
         string,
         number,
+    } as const
+})()
+
+export const storage = (() => {
+    const fromNative = (native: globalThis.Storage): Storage => ({
+        get: (name) => {
+            const stored = native.getItem(name)
+            if (!stored) {
+                return null
+            }
+
+            const parsed: Partial<Record<PropertyKey, unknown>> | null = (() => {
+                try {
+                    const raw: unknown = JSON.parse(stored)
+                    if (typeof raw !== "object" || !raw) {
+                        return null
+                    }
+
+                    return raw
+                } catch {
+                    return null
+                }
+            })()
+
+            return parsed
+        },
+        set: (name, value) => {
+            const stringified = (() => {
+                try {
+                    return JSON.stringify(value)
+                } catch {
+                    return null
+                }
+            })()
+            if (typeof stringified !== "string") {
+                return
+            }
+
+            native.setItem(name, stringified)
+        },
+    })
+
+    return {
+        local: fromNative(localStorage),
+        session: fromNative(sessionStorage),
     } as const
 })()
