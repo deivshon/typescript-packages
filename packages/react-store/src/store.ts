@@ -12,7 +12,7 @@ export type Middleware<TState extends Record<string, unknown>> = {
     transformInitial?: (state: Readonly<TState>) => TState
     onInit?: (state: Readonly<TState>) => void
     transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
-    onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, updated: Readonly<TState>) => void
+    onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, newState: Readonly<TState>) => void
 }
 
 export const createStoreWithDerived = <
