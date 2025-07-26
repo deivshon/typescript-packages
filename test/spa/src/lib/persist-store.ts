@@ -7,6 +7,8 @@ type PersistedStore = {
     local2: number
     session1: number
     session2: number
+    url1: number
+    url2: number
     randomize1: () => void
     randomize2: () => void
 }
@@ -19,17 +21,21 @@ const persistedStore = createStore<PersistedStore>(
         local2: 0,
         session1: 0,
         session2: 0,
+        url1: 0,
+        url2: 0,
         randomize1: () =>
             set({
                 memory1: Math.floor(Math.random() * 100),
                 local1: Math.floor(Math.random() * 100),
                 session1: Math.floor(Math.random() * 100),
+                url1: Math.floor(Math.random() * 100),
             }),
         randomize2: () =>
             set({
                 memory2: Math.floor(Math.random() * 100),
                 local2: Math.floor(Math.random() * 100),
                 session2: Math.floor(Math.random() * 100),
+                url2: Math.floor(Math.random() * 100),
             }),
     }),
     [
@@ -38,6 +44,8 @@ const persistedStore = createStore<PersistedStore>(
             local2: [serde.number, storage.local],
             session1: [serde.number, storage.session],
             session2: [serde.number, storage.session],
+            url1: [serde.number, storage.url],
+            url2: [serde.number, storage.url],
         }),
     ],
 )

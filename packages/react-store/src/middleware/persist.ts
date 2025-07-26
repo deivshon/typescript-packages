@@ -133,9 +133,46 @@ export const storage = (() => {
             native.setItem(name, stringified)
         },
     })
+    const url: Storage = {
+        get: () => {
+            try {
+                return new URLSearchParams(window.location.search)
+                    .entries()
+                    .reduce<Partial<Record<PropertyKey, unknown>>>((acc, [key, value]) => {
+                        acc[key] = value
+                        return acc
+                    }, {})
+            } catch {
+                return {}
+            }
+        },
+        set: (_, value) => {
+            const url = (() => {
+                try {
+                    return new URL(window.location.href)
+                } catch {
+                    return null
+                }
+            })()
+            if (!url) {
+                return
+            }
+
+            for (const key in value) {
+                if (typeof key !== "string" || typeof value[key] !== "string") {
+                    continue
+                }
+
+                url.searchParams.set(key, value[key])
+            }
+
+            window.history.pushState({}, "", url)
+        },
+    }
 
     return {
         local: fromNative(localStorage),
         session: fromNative(sessionStorage),
+        url,
     } as const
 })()

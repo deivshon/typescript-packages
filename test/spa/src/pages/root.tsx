@@ -55,9 +55,8 @@ const RootPageRandomNumber = () => {
 }
 
 const RootPagePersistedNumbers = () => {
-    const { memory1, memory2, local1, local2, session1, session2, randomize1, randomize2 } = usePersistedStore(
-        (state) => state,
-    )
+    const { memory1, memory2, local1, local2, session1, session2, url1, url2, randomize1, randomize2 } =
+        usePersistedStore((state) => state)
 
     return (
         <div>
@@ -68,6 +67,8 @@ const RootPagePersistedNumbers = () => {
                 <div>local2: {local2}</div>
                 <div>session1: {session1}</div>
                 <div>session2: {session2}</div>
+                <div>url1: {url1}</div>
+                <div>url2: {url2}</div>
             </p>
             <button onClick={randomize1}>randomize 1</button>
             <button onClick={randomize2}>randomize 2</button>
