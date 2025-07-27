@@ -60,15 +60,20 @@ const RootPagePersistedNumbers = () => {
 
     return (
         <div>
-            <p>
-                <div>memory1: {memory1}</div>
-                <div>memory2: {memory2}</div>
-                <div>local1: {local1}</div>
-                <div>local2: {local2}</div>
-                <div>session1: {session1}</div>
-                <div>session2: {session2}</div>
-                <div>url1: {url1}</div>
-                <div>url2: {url2}</div>
+            <p
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                <span>memory1: {memory1}</span>
+                <span>memory2: {memory2}</span>
+                <span>local1: {local1}</span>
+                <span>local2: {local2}</span>
+                <span>session1: {session1}</span>
+                <span>session2: {session2}</span>
+                <span>url1: {url1}</span>
+                <span>url2: {url2}</span>
             </p>
             <button onClick={randomize1}>randomize 1</button>
             <button onClick={randomize2}>randomize 2</button>
