@@ -13,23 +13,10 @@ export const persist = <TState extends Record<string, unknown>>(
     let syncOnUpdate = true
     const storageSubscriptions = new Map<symbol, { unsubscribe: () => void }>()
 
-    const getStorageValue = (key: string, storage: Storage): string | null => {
-        const stored = storage.get(name)
-        if (!stored) {
-            return null
-        }
-
-        const storedValue = stored[key]
-        if (typeof storedValue !== "string") {
-            return null
-        }
-
-        return storedValue
-    }
-
-    const getAllStorageValues = (opts: { storage: "all" | Storage }) => {
+    const getFromStorage = (opts: { storage: "all" | Storage }) => {
         const values: Partial<TState> = {}
 
+        const storedCache = new Map<Storage, Partial<Record<PropertyKey, unknown>>>()
         for (const key in persistence) {
             if (!persistence[key]) {
                 continue
@@ -40,28 +27,40 @@ export const persist = <TState extends Record<string, unknown>>(
                 continue
             }
 
-            const storedValue = getStorageValue(key, storage)
-            if (typeof storedValue !== "string") {
+            const stored = (() => {
+                const cached = storedCache.get(storage)
+                if (cached) {
+                    return cached
+                }
+
+                const retrieved = storage.get(name)
+                storedCache.set(storage, retrieved ?? {})
+
+                return retrieved
+            })()
+            if (!stored || typeof stored[key] !== "string") {
                 continue
             }
 
-            const deserialized = serializer.deserialize(storedValue)
+            const deserialized = serializer.deserialize(stored[key])
             values[key] = deserialized
         }
 
         return values
     }
 
-    const setStorageValue = (key: string, value: string, storage: Storage): void => {
-        storage.set(name, {
-            ...(storage.get(name) ?? {}),
-            [key]: value,
-        })
+    const setToStorage = (values: Map<Storage, Partial<Record<string, string>>>): void => {
+        for (const [storage, updatedValues] of values.entries()) {
+            storage.set(name, {
+                ...storage.get(name),
+                ...updatedValues,
+            })
+        }
     }
 
-    const onStorageChange = (storage: Storage, set: Store<TState, Record<string, unknown>>["set"]) => () => {
+    const onStorageUpdate = (storage: Storage, set: Store<TState, Record<string, unknown>>["set"]) => () => {
         const update = (() => {
-            const values = getAllStorageValues({ storage })
+            const values = getFromStorage({ storage })
             if (!initialState) {
                 return values
             }
@@ -94,14 +93,14 @@ export const persist = <TState extends Record<string, unknown>>(
                     continue
                 }
 
-                const unsubscribe = storage.subscribe(name, onStorageChange(storage, set))
+                const unsubscribe = storage.subscribe(name, onStorageUpdate(storage, set))
                 storageSubscriptions.set(storage.id, { unsubscribe })
             }
         },
         transformInitial: (state) => {
             initialState = {
                 ...state,
-                ...getAllStorageValues({ storage: "all" }),
+                ...getFromStorage({ storage: "all" }),
             }
             return initialState
         },
@@ -109,6 +108,8 @@ export const persist = <TState extends Record<string, unknown>>(
             if (!syncOnUpdate) {
                 return
             }
+
+            const values = new Map<Storage, Partial<Record<string, string>>>()
 
             for (const key in update) {
                 const updatedValue = newState[key]
@@ -120,8 +121,11 @@ export const persist = <TState extends Record<string, unknown>>(
                 const [serializer, storage] = persistence[key]
                 const serialized = serializer.serialize(updatedValue)
 
-                setStorageValue(key, serialized, storage)
+                const current = values.get(storage) ?? {}
+                values.set(storage, { ...current, [key]: serialized })
             }
+
+            setToStorage(values)
         },
         onDestroy: () => {
             for (const [_, { unsubscribe }] of storageSubscriptions) {
