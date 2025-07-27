@@ -1,9 +1,12 @@
 export type Storage = {
+    id: symbol
     get: (name: string) => Partial<Record<PropertyKey, unknown>> | null
     set: (name: string, value: Partial<Record<PropertyKey, unknown>>) => void
+    subscribe?: (name: string, callback: () => void) => () => void
 }
 
 const fromNative = (native: globalThis.Storage): Storage => ({
+    id: Symbol(),
     get: (name) => {
         const stored = native.getItem(name)
         if (!stored) {
@@ -44,8 +47,8 @@ const fromNative = (native: globalThis.Storage): Storage => ({
 export const local: Storage = fromNative(localStorage)
 export const session: Storage = fromNative(sessionStorage)
 
-export const url: Storage = {
-    get: () => {
+export const url: Storage = (() => {
+    const get: Storage["get"] = () => {
         try {
             return new URLSearchParams(window.location.search)
                 .entries()
@@ -56,8 +59,9 @@ export const url: Storage = {
         } catch {
             return {}
         }
-    },
-    set: (_, value) => {
+    }
+
+    const set: Storage["set"] = (_, value) => {
         const url = (() => {
             try {
                 return new URL(window.location.href)
@@ -78,5 +82,20 @@ export const url: Storage = {
         }
 
         window.history.pushState({}, "", url)
-    },
-}
+    }
+
+    const subscribe: Storage["subscribe"] = (_, callback) => {
+        window.addEventListener("popstate", callback)
+
+        return () => {
+            window.removeEventListener("popstate", callback)
+        }
+    }
+
+    return {
+        id: Symbol(),
+        get,
+        set,
+        subscribe,
+    }
+})()

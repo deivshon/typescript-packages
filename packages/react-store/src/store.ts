@@ -10,9 +10,10 @@ export type Store<TState extends Record<string, unknown>, TDerived extends Recor
 
 export type Middleware<TState extends Record<string, unknown>> = {
     transformInitial?: (state: Readonly<TState>) => TState
-    onInit?: (state: Readonly<TState>) => void
+    onInit?: (state: Readonly<TState>, set: Store<TState, Record<string, unknown>>["set"]) => void
     transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
     onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, newState: Readonly<TState>) => void
+    onDestroy?: () => void
 }
 
 export const createStoreWithDerived = <
@@ -103,7 +104,7 @@ export const createStoreWithDerived = <
             continue
         }
 
-        onInit(state)
+        onInit(state, set)
     }
 
     return {
