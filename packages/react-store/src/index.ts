@@ -1,4 +1,6 @@
 export { createStoreHook } from "./hooks"
-export { persist, serde, storage } from "./middleware/persist"
+export { persist } from "./middleware/persist/persist"
+export * as serde from "./middleware/persist/serde"
+export * as storage from "./middleware/persist/storage"
 export { shallowEq } from "./shallow"
 export { createStore, createStoreWithDerived } from "./store"
