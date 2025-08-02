@@ -15,6 +15,33 @@ export const number: Serializer<number> = {
     deserialize: (serialized) => Number(serialized),
 }
 
+export const boolean: Serializer<boolean> = (() => {
+    const string = {
+        true: "true",
+        false: "false",
+    }
+
+    return {
+        serialize: (value) => (value ? string.true : string.false),
+        deserialize: (serialized) => serialized === string.true,
+    }
+})()
+
+export const date: Serializer<Date> = (() => {
+    const invalid = String(NaN)
+
+    return {
+        serialize: (value) => {
+            try {
+                return value.toISOString()
+            } catch {
+                return invalid
+            }
+        },
+        deserialize: (serialized) => (serialized === invalid ? new Date(NaN) : new Date(serialized)),
+    }
+})()
+
 export const schema = <TSchema extends StandardSchemaV1>(
     schema: TSchema,
     initial: StandardSchemaV1.InferInput<TSchema>,

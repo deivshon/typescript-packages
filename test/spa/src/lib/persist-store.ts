@@ -4,30 +4,48 @@ import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "
 
 type PersistedStore = {
     memory1: number
-    memory2: number
+    memory2: string
+    memory3: boolean
+    memory4: Date
     local1: number
-    local2: number
+    local2: string
+    local3: boolean
+    local4: Date
     session1: number
-    session2: number
+    session2: string
+    session3: boolean
+    session4: Date
     url1: number
-    url2: number
+    url2: string
+    url3: boolean
+    url4: Date
     profile: Profile
     movie: Movie | null
     randomize1: () => void
     randomize2: () => void
+    randomize3: () => void
+    randomize4: () => void
     randomizeNonPrimitives: () => void
 }
 
 const persistedStore = createStore<PersistedStore>(
     (set) => ({
         memory1: 0,
-        memory2: 0,
+        memory2: "0",
+        memory3: false,
+        memory4: new Date(0),
         local1: 0,
-        local2: 0,
+        local2: "0",
+        local3: false,
+        local4: new Date(0),
         session1: 0,
-        session2: 0,
+        session2: "0",
+        session3: false,
+        session4: new Date(0),
         url1: 0,
-        url2: 0,
+        url2: "0",
+        url3: false,
+        url4: new Date(0),
         profile: defaultProfile,
         movie: null,
         randomize1: () =>
@@ -39,10 +57,24 @@ const persistedStore = createStore<PersistedStore>(
             }),
         randomize2: () =>
             set({
-                memory2: Math.floor(Math.random() * 100),
-                local2: Math.floor(Math.random() * 100),
-                session2: Math.floor(Math.random() * 100),
-                url2: Math.floor(Math.random() * 100),
+                memory2: String(Math.floor(Math.random() * 100)),
+                local2: String(Math.floor(Math.random() * 100)),
+                session2: String(Math.floor(Math.random() * 100)),
+                url2: String(Math.floor(Math.random() * 100)),
+            }),
+        randomize3: () =>
+            set({
+                memory3: Math.random() > 0.5,
+                local3: Math.random() > 0.5,
+                session3: Math.random() > 0.5,
+                url3: Math.random() > 0.5,
+            }),
+        randomize4: () =>
+            set({
+                memory4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
+                local4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
+                session4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
+                url4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
             }),
         randomizeNonPrimitives: () =>
             set({
@@ -53,11 +85,17 @@ const persistedStore = createStore<PersistedStore>(
     [
         persist("persisted-store", {
             local1: [serde.number, storage.local],
-            local2: [serde.number, storage.local],
+            local2: [serde.string, storage.local],
+            local3: [serde.boolean, storage.local],
+            local4: [serde.date, storage.local],
             session1: [serde.number, storage.session],
-            session2: [serde.number, storage.session],
+            session2: [serde.string, storage.session],
+            session3: [serde.boolean, storage.session],
+            session4: [serde.date, storage.session],
             url1: [serde.number, storage.url],
-            url2: [serde.number, storage.url],
+            url2: [serde.string, storage.url],
+            url3: [serde.boolean, storage.url],
+            url4: [serde.date, storage.url],
             profile: [serde.schema(profileSchema, defaultProfile), storage.local],
             movie: [serde.schema(movieSchema.or("null"), null), storage.local],
         }),
