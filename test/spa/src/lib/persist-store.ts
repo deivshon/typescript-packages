@@ -1,4 +1,6 @@
 import { createStore, createStoreHook, persist, serde, storage } from "react-store"
+import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
+import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "./schema/profile"
 
 type PersistedStore = {
     memory1: number
@@ -9,8 +11,11 @@ type PersistedStore = {
     session2: number
     url1: number
     url2: number
+    profile: Profile
+    movie: Movie | null
     randomize1: () => void
     randomize2: () => void
+    randomizeNonPrimitives: () => void
 }
 
 const persistedStore = createStore<PersistedStore>(
@@ -23,6 +28,8 @@ const persistedStore = createStore<PersistedStore>(
         session2: 0,
         url1: 0,
         url2: 0,
+        profile: defaultProfile,
+        movie: null,
         randomize1: () =>
             set({
                 memory1: Math.floor(Math.random() * 100),
@@ -37,6 +44,11 @@ const persistedStore = createStore<PersistedStore>(
                 session2: Math.floor(Math.random() * 100),
                 url2: Math.floor(Math.random() * 100),
             }),
+        randomizeNonPrimitives: () =>
+            set({
+                profile: makeRandomProfile(),
+                movie: Math.random() > 0.5 ? makeRandomMovie() : null,
+            }),
     }),
     [
         persist("persisted-store", {
@@ -46,6 +58,8 @@ const persistedStore = createStore<PersistedStore>(
             session2: [serde.number, storage.session],
             url1: [serde.number, storage.url],
             url2: [serde.number, storage.url],
+            profile: [serde.schema(profileSchema, defaultProfile), storage.local],
+            movie: [serde.schema(movieSchema.or("null"), null), storage.local],
         }),
     ],
 )

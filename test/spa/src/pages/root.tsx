@@ -14,6 +14,8 @@ export const RootPage = () => {
             <RootPageCounter />
             <RootPageRandomNumber />
             <RootPagePersistedNumbers />
+            <div style={{ height: "2rem" }} />
+            <RootPagePersistedNonPrimitives />
         </div>
     )
 }
@@ -77,6 +79,51 @@ const RootPagePersistedNumbers = () => {
             </p>
             <button onClick={randomize1}>randomize 1</button>
             <button onClick={randomize2}>randomize 2</button>
+        </div>
+    )
+}
+
+const RootPagePersistedNonPrimitives = () => {
+    const { profile, movie, randomizeNonPrimitives } = usePersistedStore((state) => state)
+
+    return (
+        <div>
+            <button type="button" onClick={randomizeNonPrimitives}>
+                Randomize non primitives
+            </button>
+            <p
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                <strong>Profile</strong>
+                <span>Age: {profile.age}</span>
+                <span>Name: {profile.name}</span>
+                {profile.notes.length > 0 && (
+                    <span>
+                        Notes:{" "}
+                        {profile.notes
+                            .map((note) => `${note.value} (${new Date(note.createdAt).toUTCString()})`)
+                            .join(", ")}
+                    </span>
+                )}
+            </p>
+            {movie && (
+                <p
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                    }}
+                >
+                    <strong>Movie</strong>
+                    <span>Length: {movie.length ?? "unknown"}</span>
+                    <span>Name: {movie.name}</span>
+                    {movie.notes.length > 0 && (
+                        <span>Notes: {movie.notes.map((note) => `${note.value} (${note.id})`).join(", ")}</span>
+                    )}
+                </p>
+            )}
         </div>
     )
 }
