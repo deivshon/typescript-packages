@@ -1,7 +1,7 @@
 import { NoFunctions } from "../../helper"
 import { Middleware, Store } from "../../store"
 import { Serializer } from "./serde"
-import { Storage } from "./storage"
+import { GlobalStorage, Storage } from "./storage"
 
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
@@ -11,7 +11,7 @@ export const persist = <TState extends Record<string, unknown>>(
 ): Middleware<TState> => {
     let initialState: TState | null = null
     let syncOnUpdate = true
-    const storageSubscriptions = new Map<symbol, { unsubscribe: () => void }>()
+    const storageSubscriptions = new Map<GlobalStorage, { unsubscribe: () => void }>()
 
     const getFromStorage = (opts: { storage: "all" | Storage }) => {
         const values: Partial<TState> = {}
@@ -34,7 +34,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 }
 
                 const retrieved = storage.get(name)
-                storedCache.set(storage, retrieved ?? {})
+                storedCache.set(storage, retrieved)
 
                 return retrieved
             })()
@@ -51,10 +51,17 @@ export const persist = <TState extends Record<string, unknown>>(
 
     const setToStorage = (values: Map<Storage, Partial<Record<string, string>>>): void => {
         for (const [storage, updatedValues] of values.entries()) {
-            storage.set(name, {
-                ...storage.get(name),
-                ...updatedValues,
-            })
+            if (storage.type === "named") {
+                storage.set(name, {
+                    ...storage.get(name),
+                    ...updatedValues,
+                })
+            } else {
+                storage.set({
+                    ...storage.get(),
+                    ...updatedValues,
+                })
+            }
         }
     }
 
@@ -89,12 +96,12 @@ export const persist = <TState extends Record<string, unknown>>(
                 }
 
                 const [_, storage] = persistence[key]
-                if (!storage.subscribe || storageSubscriptions.get(storage.id)) {
+                if (storage.type === "named" || !storage.subscribe || storageSubscriptions.get(storage)) {
                     continue
                 }
 
-                const unsubscribe = storage.subscribe(name, onStorageUpdate(storage, set))
-                storageSubscriptions.set(storage.id, { unsubscribe })
+                const unsubscribe = storage.subscribe(onStorageUpdate(storage, set))
+                storageSubscriptions.set(storage, { unsubscribe })
             }
         },
         transformInitial: (state) => {
@@ -121,7 +128,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 const [serializer, storage] = persistence[key]
                 const serialized = serializer.serialize(updatedValue)
 
-                const current = values.get(storage) ?? {}
+                const current = values.get(storage)
                 values.set(storage, { ...current, [key]: serialized })
             }
 

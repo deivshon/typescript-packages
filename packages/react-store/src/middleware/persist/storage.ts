@@ -1,58 +1,60 @@
-export type Storage = {
-    id: symbol
-    get: (name: string) => Partial<Record<PropertyKey, unknown>> | null
-    set: (name: string, value: Partial<Record<PropertyKey, unknown>>) => void
-    subscribe?: (name: string, callback: () => void) => () => void
+export type NamedStorage = {
+    type: "named"
+    get: (name: string) => Partial<Record<string, unknown>>
+    set: (name: string, value: Partial<Record<string, unknown>>) => void
 }
 
-const fromNative = (native: globalThis.Storage): Storage => ({
-    id: Symbol(),
+export type GlobalStorage = {
+    type: "global"
+    get: () => Partial<Record<string, unknown>>
+    set: (value: Partial<Record<string, unknown>>) => void
+    subscribe?: (callback: () => void) => () => void
+}
+
+export type Storage = NamedStorage | GlobalStorage
+
+const fromNative = (native: globalThis.Storage): NamedStorage => ({
+    type: "named",
     get: (name) => {
         const stored = native.getItem(name)
         if (!stored) {
-            return null
+            return {}
         }
 
-        const parsed: Partial<Record<PropertyKey, unknown>> | null = (() => {
+        const parsed: Partial<Record<string, unknown>> = (() => {
             try {
                 const raw: unknown = JSON.parse(stored)
                 if (typeof raw !== "object" || !raw) {
-                    return null
+                    return {}
                 }
 
                 return raw
             } catch {
-                return null
+                return {}
             }
         })()
 
         return parsed
     },
     set: (name, value) => {
-        const stringified = (() => {
-            try {
-                return JSON.stringify(value)
-            } catch {
-                return null
-            }
-        })()
-        if (typeof stringified !== "string") {
+        try {
+            const stringified = JSON.stringify(value)
+            native.setItem(name, stringified)
+        } catch {
             return
         }
-
-        native.setItem(name, stringified)
     },
 })
 
-export const local: Storage = fromNative(localStorage)
-export const session: Storage = fromNative(sessionStorage)
+export const local: NamedStorage = fromNative(localStorage)
+export const session: NamedStorage = fromNative(sessionStorage)
 
-export const url: Storage = (() => {
-    const get: Storage["get"] = () => {
+export const url: GlobalStorage = (() => {
+    const get: GlobalStorage["get"] = () => {
         try {
             return new URLSearchParams(window.location.search)
                 .entries()
-                .reduce<Partial<Record<PropertyKey, unknown>>>((acc, [key, value]) => {
+                .reduce<Partial<Record<string, unknown>>>((acc, [key, value]) => {
                     acc[key] = value
                     return acc
                 }, {})
@@ -61,7 +63,7 @@ export const url: Storage = (() => {
         }
     }
 
-    const set: Storage["set"] = (_, value) => {
+    const set: GlobalStorage["set"] = (value) => {
         const url = (() => {
             try {
                 return new URL(window.location.href)
@@ -84,7 +86,7 @@ export const url: Storage = (() => {
         window.history.pushState({}, "", url)
     }
 
-    const subscribe: Storage["subscribe"] = (_, callback) => {
+    const subscribe: GlobalStorage["subscribe"] = (callback) => {
         window.addEventListener("popstate", callback)
 
         return () => {
@@ -93,7 +95,7 @@ export const url: Storage = (() => {
     }
 
     return {
-        id: Symbol(),
+        type: "global",
         get,
         set,
         subscribe,
