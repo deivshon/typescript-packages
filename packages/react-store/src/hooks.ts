@@ -3,7 +3,7 @@ import { Store } from "./store"
 
 const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
     store: Store<TState, TDerived>,
-    selector: (state: Readonly<TState & TDerived>) => TSelected,
+    selector: (state: ReturnType<Store<TState, TDerived>["get"]>) => TSelected,
     eq: (prev: Readonly<TSelected>, current: Readonly<TSelected>) => boolean = Object.is,
 ): TSelected => {
     const lastSelectedRef = useRef<TSelected | null>(null)
@@ -23,7 +23,7 @@ export const createStoreHook = <TState extends Record<string, unknown>, TDerived
     store: Store<TState, TDerived>,
 ) => {
     const useStoreHook = <TSelected>(
-        selector: (state: Readonly<TState & TDerived>) => TSelected,
+        selector: (state: ReturnType<Store<TState, TDerived>["get"]>) => TSelected,
         eq: (prev: Readonly<TSelected>, current: Readonly<TSelected>) => boolean = Object.is,
     ) => useStore(store, selector, eq)
 

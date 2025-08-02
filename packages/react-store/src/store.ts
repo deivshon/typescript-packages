@@ -1,12 +1,33 @@
 import { NoFunctions } from "./helper"
 
-export type Store<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = {
-    readonly get: () => Readonly<TState & TDerived>
+export const id = Symbol.for("@deivshon/react-store.Store.id")
+export const iteration = Symbol.for("@deivshon/react-store.Store.iteration")
+
+type $Contents<
+    TState extends Record<string, unknown>,
+    TDerived extends Record<string, unknown> = Record<never, never>,
+> = TState &
+    TDerived & {
+        readonly [id]: Record<PropertyKey, never>
+        readonly [iteration]: Record<PropertyKey, never>
+    }
+
+export type Store<
+    TState extends Record<string, unknown>,
+    TDerived extends Record<string, unknown> = Record<never, never>,
+> = {
+    readonly [id]: Record<PropertyKey, never>
+    readonly get: () => Readonly<$Contents<TState, TDerived>>
     readonly set: (
-        update: Partial<NoFunctions<TState>> | ((prev: Readonly<TState & TDerived>) => Partial<NoFunctions<TState>>),
+        update:
+            | Partial<NoFunctions<TState>>
+            | ((prev: Readonly<$Contents<TState, TDerived>>) => Partial<NoFunctions<TState>>),
     ) => void
-    readonly subscribe: (callback: (state: Readonly<TState & TDerived>) => void) => () => void
+    readonly subscribe: (callback: (state: Readonly<$Contents<TState, TDerived>>) => void) => () => void
 }
+export type Contents<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = ReturnType<
+    Store<TState, TDerived>["get"]
+>
 
 export type Middleware<TState extends Record<string, unknown>> = {
     transformInitial?: (state: Readonly<TState>) => TState
@@ -26,9 +47,9 @@ export const createStoreWithDerived = <
 ): Store<TState, TDerived> => {
     let state: TState
     let derived: TDerived
-    let data: TState & TDerived
+    let contents: Contents<TState, TDerived>
 
-    const listeners = new Set<(state: Readonly<TState & TDerived>) => void>()
+    const listeners = new Set<(state: Readonly<Contents<TState, TDerived>>) => void>()
     const subscribe: Store<TState, TDerived>["subscribe"] = (callback) => {
         listeners.add(callback)
 
@@ -37,10 +58,10 @@ export const createStoreWithDerived = <
         }
     }
 
-    const get: Store<TState, TDerived>["get"] = () => data
+    const get: Store<TState, TDerived>["get"] = () => contents
     const set: Store<TState, TDerived>["set"] = (rawUpdate) => {
         const update = (() => {
-            const base = rawUpdate instanceof Function ? rawUpdate(data) : rawUpdate
+            const base = rawUpdate instanceof Function ? rawUpdate(contents) : rawUpdate
 
             let processed = base
             for (const { transformUpdate } of middlewares) {
@@ -62,9 +83,11 @@ export const createStoreWithDerived = <
             ...update,
         }
         derived = derive(state)
-        data = {
+        contents = {
             ...state,
             ...derived,
+            [id]: contents[id],
+            [iteration]: {},
         }
 
         for (const { onUpdate } of middlewares) {
@@ -76,7 +99,7 @@ export const createStoreWithDerived = <
         }
 
         for (const listenerFn of listeners) {
-            listenerFn(data)
+            listenerFn(contents)
         }
     }
 
@@ -95,9 +118,11 @@ export const createStoreWithDerived = <
         return processed
     })()
     derived = derive(state)
-    data = {
+    contents = {
         ...state,
         ...derived,
+        [id]: {},
+        [iteration]: {},
     }
     for (const { onInit } of middlewares) {
         if (!onInit) {
@@ -108,6 +133,7 @@ export const createStoreWithDerived = <
     }
 
     return {
+        [id]: contents[id],
         get,
         set,
         subscribe,
@@ -115,6 +141,6 @@ export const createStoreWithDerived = <
 }
 
 export const createStore = <TState extends Record<string, unknown>>(
-    initial: (set: Store<TState, Record<never, never>>["set"]) => TState,
+    initial: (set: Store<TState>["set"]) => TState,
     middlewares: Array<Middleware<TState>> = [],
 ) => createStoreWithDerived<TState, Record<never, never>>(initial, () => ({}), middlewares)

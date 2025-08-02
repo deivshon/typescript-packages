@@ -1,7 +1,7 @@
 import { shallowEq } from "react-store"
 import { useGlobalStore } from "../lib/global-store"
 import { usePersistedStore } from "../lib/persist-store"
-import { useSimpleStore } from "../lib/simple-store"
+import { simpleStoreStringSelector, useSimpleStore } from "../lib/simple-store"
 
 export const RootPage = () => {
     const title = useGlobalStore((state) => ({ title: state.title }), shallowEq)
@@ -16,6 +16,12 @@ export const RootPage = () => {
             <RootPagePersistedNumbers />
             <div style={{ height: "2rem" }} />
             <RootPagePersistedNonPrimitives />
+            <div>
+                <RootSimpleStoreStringInput />
+                {Array.from({ length: 100 }).map((_, idx) => (
+                    <RootSimpleStoreString key={idx} />
+                ))}
+            </div>
         </div>
     )
 }
@@ -151,6 +157,23 @@ const RootPagePersistedNonPrimitives = () => {
             )}
         </div>
     )
+}
+
+const RootSimpleStoreStringInput = () => {
+    const string = useSimpleStore(simpleStoreStringSelector)
+    const setString = useSimpleStore((state) => state.setString)
+
+    return (
+        <div>
+            <input value={string} onChange={(e) => setString(e.target.value)} />
+        </div>
+    )
+}
+
+const RootSimpleStoreString = () => {
+    const string = useSimpleStore(simpleStoreStringSelector)
+
+    return <span style={{ marginRight: "1rem" }}>{string}</span>
 }
 
 const columnStyle: React.CSSProperties = {
