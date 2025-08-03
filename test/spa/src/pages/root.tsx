@@ -6,12 +6,16 @@ import { simpleStoreStringSelector, useSimpleStore } from "../lib/simple-store"
 export const RootPage = () => {
     const title = useGlobalStore((state) => ({ title: state.title }), shallowEq)
     const description = useGlobalStore((state) => state.description)
+    const randomizeAll = usePersistedStore((state) => state.randomizeAll)
 
     return (
         <div>
             <h1>{title.title}</h1>
             <p>{description}</p>
             <RootPageCounter />
+            <button type="button" onClick={randomizeAll}>
+                Randomize all
+            </button>
             <RootPageRandomNumber />
             <RootPagePersistedNumbers />
             <div style={{ height: "2rem" }} />

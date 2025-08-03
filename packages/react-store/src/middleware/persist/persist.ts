@@ -3,10 +3,15 @@ import { Middleware, Store } from "../../store"
 import { Serializer } from "./serde"
 import { GlobalStorage, Storage } from "./storage"
 
+export type StoragePersistence = {
+    storage: Storage
+    options: Partial<Record<PropertyKey, unknown>>
+}
+
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
     persistence: {
-        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, Storage]
+        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, StoragePersistence]
     },
 ): Middleware<TState> => {
     let initialState: TState | null = null
@@ -22,7 +27,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 continue
             }
 
-            const [serializer, storage] = persistence[key]
+            const [serializer, { storage }] = persistence[key]
             if (opts.storage !== "all" && storage !== opts.storage) {
                 continue
             }
@@ -49,18 +54,33 @@ export const persist = <TState extends Record<string, unknown>>(
         return values
     }
 
-    const setToStorage = (values: Map<Storage, Partial<Record<string, string>>>): void => {
-        for (const [storage, updatedValues] of values.entries()) {
+    const setToStorage = (
+        values: Map<
+            Storage,
+            {
+                update: Partial<Record<string, string>>
+                options: Partial<Record<string, StoragePersistence["options"]>>
+            }
+        >,
+    ): void => {
+        for (const [storage, { update, options }] of values.entries()) {
             if (storage.type === "named") {
-                storage.set(name, {
-                    ...storage.get(name),
-                    ...updatedValues,
-                })
+                storage.set(
+                    name,
+                    {
+                        ...storage.get(name),
+                        ...update,
+                    },
+                    options,
+                )
             } else {
-                storage.set({
-                    ...storage.get(),
-                    ...updatedValues,
-                })
+                storage.set(
+                    {
+                        ...storage.get(),
+                        ...update,
+                    },
+                    options,
+                )
             }
         }
     }
@@ -73,7 +93,7 @@ export const persist = <TState extends Record<string, unknown>>(
             }
 
             for (const key in persistence) {
-                if (key in values || !persistence[key] || persistence[key][1] !== storage) {
+                if (key in values || !persistence[key] || persistence[key][1].storage !== storage) {
                     continue
                 }
 
@@ -95,7 +115,7 @@ export const persist = <TState extends Record<string, unknown>>(
                     continue
                 }
 
-                const [_, storage] = persistence[key]
+                const [_, { storage }] = persistence[key]
                 if (storage.type === "named" || !storage.subscribe || storageSubscriptions.get(storage)) {
                     continue
                 }
@@ -116,7 +136,13 @@ export const persist = <TState extends Record<string, unknown>>(
                 return
             }
 
-            const values = new Map<Storage, Partial<Record<string, string>>>()
+            const values = new Map<
+                Storage,
+                {
+                    update: Partial<Record<string, string>>
+                    options: Partial<Record<string, StoragePersistence["options"]>>
+                }
+            >()
 
             for (const key in update) {
                 const updatedValue = newState[key]
@@ -125,11 +151,14 @@ export const persist = <TState extends Record<string, unknown>>(
                     continue
                 }
 
-                const [serializer, storage] = persistence[key]
+                const [serializer, { storage, options }] = persistence[key]
                 const serialized = serializer.serialize(updatedValue)
 
                 const current = values.get(storage)
-                values.set(storage, { ...current, [key]: serialized })
+                values.set(storage, {
+                    update: { ...current?.update, [key]: serialized },
+                    options: { ...current?.options, [key]: options },
+                })
             }
 
             setToStorage(values)

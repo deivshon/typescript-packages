@@ -1,13 +1,22 @@
+import { StoragePersistence } from "./persist"
+
 export type NamedStorage = {
     type: "named"
     get: (name: string) => Partial<Record<string, unknown>>
-    set: (name: string, value: Partial<Record<string, unknown>>) => void
+    set: (
+        name: string,
+        value: Partial<Record<string, unknown>>,
+        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
+    ) => void
 }
 
 export type GlobalStorage = {
     type: "global"
     get: () => Partial<Record<string, unknown>>
-    set: (value: Partial<Record<string, unknown>>) => void
+    set: (
+        value: Partial<Record<string, unknown>>,
+        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
+    ) => void
     subscribe?: (callback: () => void) => () => void
 }
 
@@ -46,10 +55,23 @@ const fromNative = (native: globalThis.Storage): NamedStorage => ({
     },
 })
 
-export const local: NamedStorage = fromNative(localStorage)
-export const session: NamedStorage = fromNative(sessionStorage)
+const $localStorage: NamedStorage = fromNative(localStorage)
+export const local = (): StoragePersistence => ({
+    storage: $localStorage,
+    options: {},
+})
 
-export const url: GlobalStorage = (() => {
+const $sessionStorage: NamedStorage = fromNative(sessionStorage)
+export const session = (): StoragePersistence => ({
+    storage: $sessionStorage,
+    options: {},
+})
+
+type UrlStorageOptions = {
+    push?: boolean
+}
+
+const urlStorage: GlobalStorage = (() => {
     const get: GlobalStorage["get"] = () => {
         try {
             return new URLSearchParams(window.location.search)
@@ -63,7 +85,7 @@ export const url: GlobalStorage = (() => {
         }
     }
 
-    const set: GlobalStorage["set"] = (value) => {
+    const set: GlobalStorage["set"] = (value, options) => {
         const url = (() => {
             try {
                 return new URL(window.location.href)
@@ -75,15 +97,29 @@ export const url: GlobalStorage = (() => {
             return
         }
 
+        let replace = true
         for (const key in value) {
             if (typeof key !== "string" || typeof value[key] !== "string") {
                 continue
             }
 
             url.searchParams.set(key, value[key])
+
+            if (!(key in options)) {
+                continue
+            }
+
+            const fieldOptions = parseUrlStorageOptions(options[key] ?? {})
+            if (fieldOptions.push) {
+                replace = false
+            }
         }
 
-        window.history.pushState({}, "", url)
+        if (replace) {
+            window.history.replaceState({}, "", url)
+        } else {
+            window.history.pushState({}, "", url)
+        }
     }
 
     const subscribe: GlobalStorage["subscribe"] = (callback) => {
@@ -101,3 +137,8 @@ export const url: GlobalStorage = (() => {
         subscribe,
     }
 })()
+export const url = (options: UrlStorageOptions = {}): StoragePersistence => ({ storage: urlStorage, options })
+
+const parseUrlStorageOptions = (options: Partial<Record<never, unknown>>): Required<UrlStorageOptions> => ({
+    push: "push" in options && typeof options.push === "boolean" ? options.push : false,
+})
