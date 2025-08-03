@@ -13,6 +13,11 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.mjs",
             "require": "./dist/index.js"
+        },
+        "./persist": {
+            "types": "./dist/middleware/persist/index.d.ts",
+            "import": "./dist/middleware/persist/index.mjs",
+            "require": "./dist/middleware/persist/index.js"
         }
     },
     "scripts": {

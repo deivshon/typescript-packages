@@ -1,7 +1,12 @@
 export { createStoreHook } from "./hooks"
-export { persist } from "./middleware/persist/persist"
-export * as serde from "./middleware/persist/serde"
-export * as storage from "./middleware/persist/storage"
 export { memoizedSelector } from "./selector"
 export { shallowEq } from "./shallow"
-export { createStore, createStoreWithDerived, id as storeId, iteration as storeIteration } from "./store"
+export {
+    createStore,
+    createStoreWithDerived,
+    id as storeId,
+    iteration as storeIteration,
+    type Contents,
+    type Middleware,
+    type Store,
+} from "./store"
