@@ -3,10 +3,7 @@ import { NoFunctions } from "./helper"
 export const id = Symbol.for("@deivshon/react-store.Store.id")
 export const iteration = Symbol.for("@deivshon/react-store.Store.iteration")
 
-type $Contents<
-    TState extends Record<string, unknown>,
-    TDerived extends Record<string, unknown> = Record<never, never>,
-> = TState &
+type $Contents<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = TState &
     TDerived & {
         readonly [id]: Record<PropertyKey, never>
         readonly [iteration]: Record<PropertyKey, never>
@@ -25,9 +22,10 @@ export type Store<
     ) => void
     readonly subscribe: (callback: (state: Readonly<$Contents<TState, TDerived>>) => void) => () => void
 }
-export type Contents<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = ReturnType<
-    Store<TState, TDerived>["get"]
->
+export type Contents<
+    TState extends Record<string, unknown>,
+    TDerived extends Record<string, unknown> = Record<never, never>,
+> = ReturnType<Store<TState, TDerived>["get"]>
 
 export type Middleware<TState extends Record<string, unknown>> = {
     transformInitial?: (state: Readonly<TState>) => TState
