@@ -28,11 +28,11 @@ export type Contents<
 > = ReturnType<Store<TState, TDerived>["get"]>
 
 export type Middleware<TState extends Record<string, unknown>> = {
-    transformInitial?: (state: Readonly<TState>) => TState
-    onInit?: (state: Readonly<TState>, set: Store<TState, Record<string, unknown>>["set"]) => void
-    transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
-    onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, newState: Readonly<TState>) => void
-    onDestroy?: () => void
+    readonly transformInitial?: (state: Readonly<TState>) => TState
+    readonly onInit?: (state: Readonly<TState>, set: Store<TState, Record<string, unknown>>["set"]) => void
+    readonly transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
+    readonly onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, newState: Readonly<TState>) => void
+    readonly onDestroy?: () => void
 }
 
 export const createStoreWithDerived = <
