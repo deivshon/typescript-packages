@@ -1,7 +1,7 @@
 import { NoFunctions } from "../../helper"
 import { Middleware, Store } from "../../store"
 import { Serializer } from "./serde"
-import { GlobalStorage, Storage } from "./storage"
+import { GlobalStorage, Storage } from "./storage/storage"
 
 export type StoragePersistence = {
     storage: Storage
