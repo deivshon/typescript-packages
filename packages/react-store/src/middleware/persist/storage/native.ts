@@ -9,7 +9,7 @@ const fromNative = (native: globalThis.Storage): NamedStorage => ({
             return {}
         }
 
-        const parsed: Partial<Record<string, unknown>> = (() => {
+        const parsed: Partial<Record<string, string>> = (() => {
             try {
                 const raw: unknown = JSON.parse(stored)
                 if (typeof raw !== "object" || !raw) {

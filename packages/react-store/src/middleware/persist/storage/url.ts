@@ -1,6 +1,45 @@
 import { StoragePersistence } from "../persist"
 import { GlobalStorage } from "./storage"
 
+type UrlStateControls = {
+    get: () => Array<[string, string]>
+    set: (
+        entries: Array<[string, string]>,
+        opts: {
+            replace: boolean
+        },
+    ) => void
+}
+
+let urlStateControls: UrlStateControls | null = null
+export const setUrlStorageControls = (controls: UrlStateControls | null) => {
+    urlStateControls = controls
+}
+
+const sync = (() => {
+    const listeners = new Set<() => void>()
+
+    const dispatch = () => {
+        for (const listener of listeners) {
+            listener()
+        }
+    }
+
+    const listen = (callback: () => void) => {
+        listeners.add(callback)
+
+        return () => {
+            listeners.delete(callback)
+        }
+    }
+
+    return {
+        dispatch,
+        listen,
+    }
+})()
+export const syncUrlStorage = sync.dispatch
+
 type UrlStorageOptions = {
     push?: boolean
 }
@@ -11,29 +50,22 @@ const parseUrlStorageOptions = (options: Partial<Record<never, unknown>>): Requi
 
 const urlStorage: GlobalStorage = (() => {
     const get: GlobalStorage["get"] = () => {
-        try {
-            return new URLSearchParams(window.location.search)
-                .entries()
-                .reduce<Partial<Record<string, unknown>>>((acc, [key, value]) => {
-                    acc[key] = value
-                    return acc
-                }, {})
-        } catch {
-            return {}
-        }
+        const entries = urlStateControls
+            ? urlStateControls.get()
+            : Array.from(new URLSearchParams(window.location.search))
+
+        return entries.reduce<Partial<Record<string, string>>>((acc, [key, value]) => {
+            acc[key] = value
+            return acc
+        }, {})
     }
 
     const set: GlobalStorage["set"] = (value, options) => {
-        const url = (() => {
-            try {
-                return new URL(window.location.href)
-            } catch {
-                return null
-            }
-        })()
-        if (!url) {
+        if (!urlStateControls) {
             return
         }
+
+        const current = get()
 
         let replace = true
         for (const key in value) {
@@ -41,7 +73,7 @@ const urlStorage: GlobalStorage = (() => {
                 continue
             }
 
-            url.searchParams.set(key, value[key])
+            current[key] = value[key]
 
             if (!(key in options)) {
                 continue
@@ -53,18 +85,31 @@ const urlStorage: GlobalStorage = (() => {
             }
         }
 
+        const entries = (() => {
+            const result: Array<[string, string]> = []
+            for (const [key, value] of Object.entries(current)) {
+                if (!value) {
+                    continue
+                }
+
+                result.push([key, value])
+            }
+
+            return result
+        })()
+
         if (replace) {
-            window.history.replaceState({}, "", url)
+            urlStateControls.set(entries, { replace: true })
         } else {
-            window.history.pushState({}, "", url)
+            urlStateControls.set(entries, { replace: false })
         }
     }
 
     const subscribe: GlobalStorage["subscribe"] = (callback) => {
-        window.addEventListener("popstate", callback)
+        const cleanup = sync.listen(callback)
 
         return () => {
-            window.removeEventListener("popstate", callback)
+            cleanup()
         }
     }
 
@@ -76,4 +121,7 @@ const urlStorage: GlobalStorage = (() => {
     }
 })()
 
+/**
+ * Use `setUrlStorageControls` and `syncUrlStorage` to sync with your URL search parameters source of truth
+ */
 export const url = (options: UrlStorageOptions = {}): StoragePersistence => ({ storage: urlStorage, options })

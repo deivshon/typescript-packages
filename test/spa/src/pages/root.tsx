@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from "react-router"
 import { shallowEq } from "react-store"
 import { useGlobalStore } from "../lib/global-store"
 import { usePersistedStore } from "../lib/persist-store"
@@ -8,8 +9,21 @@ export const RootPage = () => {
     const description = useGlobalStore((state) => state.description)
     const randomizeAll = usePersistedStore((state) => state.randomizeAll)
 
+    const [searchParams, setSearchParams] = useSearchParams()
+    const onReactRouterCountIncrease = () => {
+        const current = Number(searchParams.get("rr-count"))
+        setSearchParams((p) => {
+            p.set("rr-count", isNaN(current) ? String(1) : String(current + 1))
+            return p
+        })
+    }
     return (
         <div>
+            <p>
+                Root <Link to="/page-1">Page 1</Link>
+            </p>
+            React Router url count {searchParams.get("rr-count")}
+            <button onClick={onReactRouterCountIncrease}>Increment</button>
             <h1>{title.title}</h1>
             <p>{description}</p>
             <RootPageCounter />
