@@ -125,11 +125,12 @@ export const persist = <TState extends Record<string, unknown>>(
             }
         },
         transformInitial: (state) => {
-            initialState = {
+            initialState = state
+
+            return {
                 ...state,
                 ...getFromStorage({ storage: "all" }),
             }
-            return initialState
         },
         onUpdate: (update, newState) => {
             if (!syncOnUpdate) {
