@@ -21,7 +21,7 @@ export const persist = <TState extends Record<string, unknown>>(
     const getFromStorage = (opts: { storage: "all" | Storage }) => {
         const values: Partial<TState> = {}
 
-        const storedCache = new Map<Storage, Partial<Record<PropertyKey, unknown>>>()
+        const storedCache = new Map<Storage, Partial<Record<string, string>>>()
         for (const key in persistence) {
             if (!persistence[key]) {
                 continue
