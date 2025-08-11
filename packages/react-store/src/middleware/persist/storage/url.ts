@@ -98,11 +98,7 @@ const urlStorage: GlobalStorage = (() => {
             return result
         })()
 
-        if (replace) {
-            urlStateControls.set(entries, { replace: true })
-        } else {
-            urlStateControls.set(entries, { replace: false })
-        }
+        urlStateControls.set(entries, { replace })
     }
 
     const subscribe: GlobalStorage["subscribe"] = (callback) => {
