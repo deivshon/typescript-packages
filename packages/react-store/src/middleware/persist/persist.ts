@@ -14,8 +14,9 @@ export const persist = <TState extends Record<string, unknown>>(
         [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, StoragePersistence]
     },
 ): Middleware<TState> => {
+    const shouldSync = Symbol()
+
     let initialState: TState | null = null
-    let syncOnUpdate = true
     const storageSubscriptions = new Map<GlobalStorage, { unsubscribe: () => void }>()
 
     const getFromStorage = (opts: { storage: "all" | Storage }) => {
@@ -103,9 +104,7 @@ export const persist = <TState extends Record<string, unknown>>(
             return values
         })()
 
-        syncOnUpdate = false
-        set(update)
-        syncOnUpdate = true
+        set(update, { [shouldSync]: false })
     }
 
     return {
@@ -132,8 +131,8 @@ export const persist = <TState extends Record<string, unknown>>(
                 ...getFromStorage({ storage: "all" }),
             }
         },
-        onUpdate: (update, newState) => {
-            if (!syncOnUpdate) {
+        onUpdate: (update, newState, meta) => {
+            if (meta[shouldSync] === false) {
                 return
             }
 

@@ -19,6 +19,7 @@ export type Store<
         update:
             | Partial<NoFunctions<TState>>
             | ((prev: Readonly<$Contents<TState, TDerived>>) => Partial<NoFunctions<TState>>),
+        meta?: Partial<Record<symbol, unknown>>,
     ) => void
     readonly subscribe: (callback: (state: Readonly<$Contents<TState, TDerived>>) => void) => () => void
 }
@@ -30,8 +31,15 @@ export type Contents<
 export type Middleware<TState extends Record<string, unknown>> = {
     readonly transformInitial?: (state: Readonly<TState>) => TState
     readonly onInit?: (state: Readonly<TState>, set: Store<TState, Record<string, unknown>>["set"]) => void
-    readonly transformUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>) => Partial<NoFunctions<TState>>
-    readonly onUpdate?: (update: Readonly<Partial<NoFunctions<TState>>>, newState: Readonly<TState>) => void
+    readonly transformUpdate?: (
+        update: Readonly<Partial<NoFunctions<TState>>>,
+        meta: Partial<Record<symbol, unknown>>,
+    ) => Partial<NoFunctions<TState>>
+    readonly onUpdate?: (
+        update: Readonly<Partial<NoFunctions<TState>>>,
+        newState: Readonly<TState>,
+        meta: Partial<Record<symbol, unknown>>,
+    ) => void
     readonly onDestroy?: () => void
 }
 
@@ -57,7 +65,7 @@ export const createStoreWithDerived = <
     }
 
     const get: Store<TState, TDerived>["get"] = () => contents
-    const set: Store<TState, TDerived>["set"] = (rawUpdate) => {
+    const set: Store<TState, TDerived>["set"] = (rawUpdate, meta = {}) => {
         const update = (() => {
             const base = rawUpdate instanceof Function ? rawUpdate(contents) : rawUpdate
 
@@ -67,7 +75,7 @@ export const createStoreWithDerived = <
                     continue
                 }
 
-                processed = transformUpdate(processed)
+                processed = transformUpdate(processed, meta)
             }
 
             return processed
@@ -93,7 +101,7 @@ export const createStoreWithDerived = <
                 continue
             }
 
-            onUpdate(update, state)
+            onUpdate(update, state, meta)
         }
 
         for (const listenerFn of listeners) {
