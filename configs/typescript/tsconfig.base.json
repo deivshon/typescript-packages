@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "allowJs": false,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "isolatedModules": true,
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "noEmit": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedSideEffectImports": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "target": "es2018"
+    }
+}

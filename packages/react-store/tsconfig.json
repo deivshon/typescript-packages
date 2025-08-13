@@ -1,21 +1,5 @@
 {
-    "compilerOptions": {
-        "target": "es2018",
-        "lib": ["dom", "dom.iterable", "esnext"],
-        "esModuleInterop": true,
-        "module": "esnext",
-        "moduleResolution": "node",
-        "isolatedModules": true,
-        "noEmit": true,
-        "skipLibCheck": true,
-        "strict": true,
-        "allowJs": false,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true,
-        "forceConsistentCasingInFileNames": true
-    },
+    "extends": "../../configs/typescript/tsconfig.base.json",
     "include": ["src"],
     "exclude": ["node_modules", "dist"]
 }

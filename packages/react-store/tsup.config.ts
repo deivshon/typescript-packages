@@ -1,13 +1,10 @@
 import { defineConfig } from "tsup"
+import { baseTsUpConfig } from "../../configs/tsup/tsup.config.base"
 
 export default defineConfig({
+    ...baseTsUpConfig,
     entry: {
         index: "src/index.ts",
         persist: "src/middleware/persist/index.ts",
     },
-    sourcemap: false,
-    minify: true,
-    dts: true,
-    format: ["esm", "cjs"],
-    bundle: true,
 })
