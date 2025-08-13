@@ -1,5 +1,5 @@
+import { Store } from "@deivshon/store"
 import { useRef, useSyncExternalStore } from "react"
-import { Store } from "./store"
 
 const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
     store: Store<TState, TDerived>,

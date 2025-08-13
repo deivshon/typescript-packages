@@ -16,6 +16,9 @@
         "react-dom": "^19.1.0",
         "react-router": "^7.6.3",
         "@deivshon/react-store": "workspace:*",
+        "@deivshon/serialization": "workspace:*",
+        "@deivshon/store-persist-middleware": "workspace:*",
+        "@deivshon/storage": "workspace:*",
         "zod": "^4.0.14"
     },
     "devDependencies": {

@@ -1,19 +1,19 @@
 {
-    "name": "@deivshon/react-store",
+    "name": "@deivshon/types-toolkit",
     "version": "0.0.0",
     "license": "MIT",
-    "main": "./dist/index.js",
-    "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
-            "require": "./dist/index.js"
+            "types": "./dist/index.d.ts"
         }
+    },
+    "dependencies": {
+        "@deivshon/serialization": "workspace:*",
+        "@deivshon/storage": "workspace:*"
     },
     "scripts": {
         "build": "tsup src",
@@ -22,21 +22,11 @@
         "lint": "eslint .",
         "dev": "tsup src --watch"
     },
-    "peerDependencies": {
-        "react": "^19"
-    },
-    "dependencies": {
-        "@deivshon/store": "workspace:*"
-    },
-    "devDependencies": {
-        "@standard-schema/spec": "^1.0.0",
-        "@types/react": "19.0.12"
-    },
     "sideEffects": false,
     "repository": {
         "type": "git",
         "url": "git+https://github.com/deivshon/typescript-packages.git",
-        "directory": "packages/react-store"
+        "directory": "packages/types-toolkit"
     },
     "bugs": {
         "url": "https://github.com/deivshon/typescript-packages/issues"

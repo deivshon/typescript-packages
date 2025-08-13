@@ -1,4 +1,3 @@
-import { StoragePersistence } from "../persist"
 import { GlobalStorage } from "./storage"
 
 type UrlStateControls = {
@@ -40,7 +39,7 @@ const sync = (() => {
 })()
 export const syncUrlStorage = sync.dispatch
 
-type UrlStorageOptions = {
+export type UrlStorageOptions = {
     push?: boolean
 }
 
@@ -48,7 +47,7 @@ const parseUrlStorageOptions = (options: Partial<Record<never, unknown>>): Requi
     push: "push" in options && typeof options.push === "boolean" ? options.push : false,
 })
 
-const urlStorage: GlobalStorage = (() => {
+export const url: GlobalStorage = (() => {
     const get: GlobalStorage["get"] = () => {
         const entries = urlStateControls
             ? urlStateControls.get()
@@ -116,8 +115,3 @@ const urlStorage: GlobalStorage = (() => {
         subscribe,
     }
 })()
-
-/**
- * Use `setUrlStorageControls` and `syncUrlStorage` to sync with your URL search parameters source of truth
- */
-export const url = (options: UrlStorageOptions = {}): StoragePersistence => ({ storage: urlStorage, options })

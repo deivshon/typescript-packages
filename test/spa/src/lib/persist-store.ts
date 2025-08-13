@@ -1,5 +1,6 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
-import { persist, serde, storage } from "@deivshon/react-store/persist"
+import { boolean, date, number, schema, string } from "@deivshon/serialization"
+import { persist, persistLocal, persistSession, persistUrl } from "@deivshon/store-persist-middleware"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
 import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "./schema/profile"
 
@@ -66,20 +67,20 @@ const persistedStore = createStore<PersistedStore>(
     }),
     [
         persist("persisted-store", {
-            local1: [serde.number, storage.local()],
-            local2: [serde.string, storage.local()],
-            local3: [serde.boolean, storage.local()],
-            local4: [serde.date, storage.local()],
-            session1: [serde.number, storage.session()],
-            session2: [serde.string, storage.session()],
-            session3: [serde.boolean, storage.session()],
-            session4: [serde.date, storage.session()],
-            url1: [serde.number, storage.url({ push: true })],
-            url2: [serde.string, storage.url()],
-            url3: [serde.boolean, storage.url({ push: true })],
-            url4: [serde.date, storage.url()],
-            profile: [serde.schema(profileSchema, defaultProfile), storage.local()],
-            movie: [serde.schema(movieSchema.or("undefined | null"), undefined), storage.url()],
+            local1: [number, persistLocal()],
+            local2: [string, persistLocal()],
+            local3: [boolean, persistLocal()],
+            local4: [date, persistLocal()],
+            session1: [number, persistSession()],
+            session2: [string, persistSession()],
+            session3: [boolean, persistSession()],
+            session4: [date, persistSession()],
+            url1: [number, persistUrl({ push: true })],
+            url2: [string, persistUrl()],
+            url3: [boolean, persistUrl({ push: true })],
+            url4: [date, persistUrl()],
+            profile: [schema(profileSchema, defaultProfile), persistLocal()],
+            movie: [schema(movieSchema.or("undefined | null"), undefined), persistUrl()],
         }),
     ],
 )

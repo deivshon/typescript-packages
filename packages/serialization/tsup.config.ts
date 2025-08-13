@@ -5,5 +5,6 @@ export default defineConfig({
     ...baseTsUpConfig,
     entry: {
         index: "src/index.ts",
+        persist: "src/middleware/persist/index.ts",
     },
 })

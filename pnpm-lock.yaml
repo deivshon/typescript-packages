@@ -38,6 +38,9 @@ importers:
 
   packages/react-store:
     dependencies:
+      '@deivshon/store':
+        specifier: workspace:*
+        version: link:../store
       react:
         specifier: ^19
         version: 19.1.0
@@ -49,11 +52,67 @@ importers:
         specifier: 19.0.12
         version: 19.0.12
 
+  packages/serialization:
+    devDependencies:
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
+
+  packages/storage:
+    devDependencies:
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
+
+  packages/store:
+    dependencies:
+      '@deivshon/serialization':
+        specifier: workspace:*
+        version: link:../serialization
+    devDependencies:
+      '@deivshon/types-toolkit':
+        specifier: workspace:*
+        version: link:../types-toolkit
+
+  packages/store-persist-middleware:
+    dependencies:
+      '@deivshon/serialization':
+        specifier: workspace:*
+        version: link:../serialization
+      '@deivshon/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@deivshon/store':
+        specifier: workspace:*
+        version: link:../store
+    devDependencies:
+      '@deivshon/types-toolkit':
+        specifier: workspace:*
+        version: link:../types-toolkit
+
+  packages/types-toolkit:
+    dependencies:
+      '@deivshon/serialization':
+        specifier: workspace:*
+        version: link:../serialization
+      '@deivshon/storage':
+        specifier: workspace:*
+        version: link:../storage
+
   test/spa:
     dependencies:
       '@deivshon/react-store':
         specifier: workspace:*
         version: link:../../packages/react-store
+      '@deivshon/serialization':
+        specifier: workspace:*
+        version: link:../../packages/serialization
+      '@deivshon/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@deivshon/store-persist-middleware':
+        specifier: workspace:*
+        version: link:../../packages/store-persist-middleware
       arktype:
         specifier: ^2.1.20
         version: 2.1.20

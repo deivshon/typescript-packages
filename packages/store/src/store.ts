@@ -1,4 +1,4 @@
-import { NoFunctions } from "./helper"
+import { NoFunctions } from "@deivshon/types-toolkit"
 
 export const id = Symbol.for("@deivshon/react-store.Store.id")
 export const iteration = Symbol.for("@deivshon/react-store.Store.iteration")

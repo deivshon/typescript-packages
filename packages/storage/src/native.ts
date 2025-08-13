@@ -1,4 +1,3 @@
-import { StoragePersistence } from "../persist"
 import { NamedStorage } from "./storage"
 
 const fromNative = (native: globalThis.Storage): NamedStorage => ({
@@ -34,14 +33,5 @@ const fromNative = (native: globalThis.Storage): NamedStorage => ({
     },
 })
 
-const $localStorage: NamedStorage = fromNative(localStorage)
-export const local = (): StoragePersistence => ({
-    storage: $localStorage,
-    options: {},
-})
-
-const $sessionStorage: NamedStorage = fromNative(sessionStorage)
-export const session = (): StoragePersistence => ({
-    storage: $sessionStorage,
-    options: {},
-})
+export const local: NamedStorage = fromNative(localStorage)
+export const session: NamedStorage = fromNative(sessionStorage)
