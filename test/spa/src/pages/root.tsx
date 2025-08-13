@@ -1,5 +1,5 @@
+import { shallowEq } from "@deivshon/react-store"
 import { Link, useSearchParams } from "react-router"
-import { shallowEq } from "react-store"
 import { useGlobalStore } from "../lib/global-store"
 import { usePersistedStore } from "../lib/persist-store"
 import { simpleStoreStringSelector, useSimpleStore } from "../lib/simple-store"

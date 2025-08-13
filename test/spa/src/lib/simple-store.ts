@@ -1,4 +1,4 @@
-import { createStore, createStoreHook, memoizedSelector } from "react-store"
+import { createStore, createStoreHook, memoizedSelector } from "@deivshon/react-store"
 
 type SimpleStore = {
     number: number

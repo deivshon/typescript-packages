@@ -1,4 +1,4 @@
-import { createStoreHook, createStoreWithDerived } from "react-store"
+import { createStoreHook, createStoreWithDerived } from "@deivshon/react-store"
 
 type GlobalStoreState = {
     title: string

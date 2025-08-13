@@ -1,5 +1,5 @@
-import { createStore, createStoreHook } from "react-store"
-import { persist, serde, storage } from "react-store/persist"
+import { createStore, createStoreHook } from "@deivshon/react-store"
+import { persist, serde, storage } from "@deivshon/react-store/persist"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
 import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "./schema/profile"
 

@@ -1,6 +1,6 @@
+import { setUrlStorageControls, syncUrlStorage } from "@deivshon/react-store/persist"
 import { useLayoutEffect, type ReactNode } from "react"
 import { useSearchParams } from "react-router"
-import { setUrlStorageControls, syncUrlStorage } from "react-store/persist"
 
 type UrlPersistProvider = {
     children?: ReactNode

@@ -51,6 +51,9 @@ importers:
 
   test/spa:
     dependencies:
+      '@deivshon/react-store':
+        specifier: workspace:*
+        version: link:../../packages/react-store
       arktype:
         specifier: ^2.1.20
         version: 2.1.20
@@ -63,9 +66,6 @@ importers:
       react-router:
         specifier: ^7.6.3
         version: 7.6.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      react-store:
-        specifier: workspace:*
-        version: link:../../packages/react-store
       zod:
         specifier: ^4.0.14
         version: 4.0.14

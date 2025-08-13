@@ -1,5 +1,5 @@
 {
-    "name": "react-store",
+    "name": "@deivshon/react-store",
     "version": "0.0.0",
     "license": "MIT",
     "main": "./dist/index.js",
@@ -39,13 +39,13 @@
     "sideEffects": false,
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/deivshon/react-store.git",
-        "directory": "react-store"
+        "url": "git+https://github.com/deivshon/typescript-packages.git",
+        "directory": "packages/react-store"
     },
     "bugs": {
-        "url": "https://github.com/deivshon/react-store/issues"
+        "url": "https://github.com/deivshon/typescript-packages/issues"
     },
-    "homepage": "https://github.com/deivshon/react-store#readme",
+    "homepage": "https://github.com/deivshon/typescript-packages#readme",
     "author": {
         "name": "deivshon",
         "url": "https://github.com/deivshon"
