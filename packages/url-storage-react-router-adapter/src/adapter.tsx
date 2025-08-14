@@ -2,12 +2,11 @@ import { setUrlStorageControls, syncUrlStorage } from "@deivshon/storage"
 import { useLayoutEffect, type ReactNode } from "react"
 import { useSearchParams } from "react-router"
 
-type UrlPersistProvider = {
+type UrlStorageReactRouterAdapterProps = {
     children?: ReactNode
 }
 
-// FIXME separate this into own react router adapter package
-export const UrlPersistProvider = ({ children }: UrlPersistProvider) => {
+export const UrlStorageReactRouterAdapter = ({ children }: UrlStorageReactRouterAdapterProps) => {
     const [searchParams, setSearchParams] = useSearchParams()
 
     useLayoutEffect(() => {

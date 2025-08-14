@@ -1,0 +1,47 @@
+{
+    "name": "@deivshon/url-storage-react-router-adapter",
+    "version": "0.0.0",
+    "license": "MIT",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "peerDependencies": {
+        "@deivshon/storage": "workspace:*",
+        "react-router": "^7.0.0",
+        "react": "^19.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "19.0.12"
+    },
+    "scripts": {
+        "build": "tsup src",
+        "typecheck": "tsc --noEmit",
+        "typecheck:watch": "tsc --noEmit --watch",
+        "lint": "eslint .",
+        "dev": "tsup src --watch"
+    },
+    "sideEffects": false,
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/deivshon/typescript-packages.git",
+        "directory": "packages/url-storage-react-router-adapter"
+    },
+    "bugs": {
+        "url": "https://github.com/deivshon/typescript-packages/issues"
+    },
+    "homepage": "https://github.com/deivshon/typescript-packages#readme",
+    "author": {
+        "name": "deivshon",
+        "url": "https://github.com/deivshon"
+    }
+}

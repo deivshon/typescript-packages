@@ -99,6 +99,22 @@ importers:
         specifier: workspace:*
         version: link:../storage
 
+  packages/url-storage-react-router-adapter:
+    dependencies:
+      '@deivshon/storage':
+        specifier: workspace:*
+        version: link:../storage
+      react:
+        specifier: ^19.0.0
+        version: 19.1.0
+      react-router:
+        specifier: ^7.0.0
+        version: 7.6.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+    devDependencies:
+      '@types/react':
+        specifier: 19.0.12
+        version: 19.0.12
+
   scripts/build:
     dependencies:
       es-toolkit:
@@ -120,12 +136,12 @@ importers:
       '@deivshon/serialization':
         specifier: workspace:*
         version: link:../../packages/serialization
-      '@deivshon/storage':
-        specifier: workspace:*
-        version: link:../../packages/storage
       '@deivshon/store-persist-middleware':
         specifier: workspace:*
         version: link:../../packages/store-persist-middleware
+      '@deivshon/url-storage-react-router-adapter':
+        specifier: workspace:*
+        version: link:../../packages/url-storage-react-router-adapter
       arktype:
         specifier: ^2.1.20
         version: 2.1.20

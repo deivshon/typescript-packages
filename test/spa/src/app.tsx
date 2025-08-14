@@ -1,7 +1,7 @@
+import { UrlStorageReactRouterAdapter } from "@deivshon/url-storage-react-router-adapter"
 import { lazy } from "react"
 import { createBrowserRouter, createRoutesFromElements, Outlet, Route, RouterProvider } from "react-router"
 import { RootPage } from "./pages/root"
-import { UrlPersistProvider } from "./persist-provider"
 
 const Page1 = lazy(() => import("./pages/page-1"))
 
@@ -9,9 +9,9 @@ const routes = (
     <>
         <Route
             element={
-                <UrlPersistProvider>
+                <UrlStorageReactRouterAdapter>
                     <Outlet />
-                </UrlPersistProvider>
+                </UrlStorageReactRouterAdapter>
             }
         >
             <Route path="/" element={<RootPage />} />
