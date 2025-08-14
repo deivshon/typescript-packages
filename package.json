@@ -1,8 +1,11 @@
 {
     "scripts": {
-        "build": "pnpm -C packages/react-store build",
+        "build": "pnpm -C ./scripts/build execute",
+        "dev": "pnpm build && pnpm -r --parallel --filter \"./packages/*\" dev",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "clean": "rm -rf ./packages/*/dist ./scripts/*/dist ./test/*/dist ./test/*/.next",
+        "purge": "rm -rf node_modules ./packages/*/node_modules ./scripts/*/node_modules ./test/*/node_modules"
     },
     "devDependencies": {
         "@eslint/js": "^9.30.1",

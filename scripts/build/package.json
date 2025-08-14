@@ -1,0 +1,16 @@
+{
+    "name": "build",
+    "type": "module",
+    "scripts": {
+        "execute": "node ./src/build.ts",
+        "typecheck": "tsc --noEmit",
+        "typecheck:watch": "tsc --noEmit --watch"
+    },
+    "devDependencies": {
+        "@types/node": "^24.2.1"
+    },
+    "dependencies": {
+        "es-toolkit": "^1.39.9",
+        "zod": "^4.0.14"
+    }
+}
