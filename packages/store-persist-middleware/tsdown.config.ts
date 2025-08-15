@@ -1,4 +1,4 @@
-import { baseTsDownConfig } from "@internal/tsdown-configs"
+import { baseTsDownConfig } from "@build/tsdown-configs"
 import { defineConfig } from "tsdown"
 
 export default defineConfig({

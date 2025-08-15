@@ -19,11 +19,18 @@
     "peerDependencies": {
         "@deivshon/storage": "workspace:*",
         "react-router": "^7.0.0",
-        "react": "^19.0.0"
+        "react": "^18.0.0 || ^19.0.0",
+        "@types/react": "^18.0.0 || ^19.0.0"
     },
     "devDependencies": {
-        "@internal/tsdown-configs": "workspace:*",
-        "@types/react": "19.0.12"
+        "@build/tsdown-configs": "workspace:*",
+        "react": "^19.1.1",
+        "@types/react": "19.1.10"
+    },
+    "peerDependenciesMeta": {
+        "@types/react": {
+            "optional": true
+        }
     },
     "scripts": {
         "build": "tsdown",

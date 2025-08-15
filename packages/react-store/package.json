@@ -24,15 +24,16 @@
         "dev": "tsdown --watch"
     },
     "peerDependencies": {
-        "react": "^19"
+        "react": "^19.0.0 || ^18.0.0"
     },
     "dependencies": {
-        "@internal/tsdown-configs": "workspace:*",
         "@deivshon/store": "workspace:*"
     },
     "devDependencies": {
+        "@build/tsdown-configs": "workspace:*",
         "@standard-schema/spec": "^1.0.0",
-        "@types/react": "19.0.12"
+        "react": "^19.1.1",
+        "@types/react": "19.1.10"
     },
     "sideEffects": false,
     "repository": {

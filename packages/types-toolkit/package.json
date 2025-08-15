@@ -20,7 +20,7 @@
         "dev": "tsdown --watch"
     },
     "devDependencies": {
-        "@internal/tsdown-configs": "workspace:*"
+        "@build/tsdown-configs": "workspace:*"
     },
     "sideEffects": false,
     "repository": {

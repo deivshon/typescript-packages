@@ -18,11 +18,11 @@
     },
     "dependencies": {
         "@deivshon/serialization": "workspace:*",
-        "@deivshon/storage": "workspace:*"
+        "@deivshon/storage": "workspace:*",
+        "@deivshon/types-toolkit": "workspace:*"
     },
     "devDependencies": {
-        "@internal/tsdown-configs": "workspace:*",
-        "@deivshon/types-toolkit": "workspace:*"
+        "@build/tsdown-configs": "workspace:*"
     },
     "peerDependencies": {
         "@deivshon/store": "workspace:*"

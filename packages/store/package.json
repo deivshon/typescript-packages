@@ -17,11 +17,10 @@
         }
     },
     "dependencies": {
-        "@deivshon/serialization": "workspace:*"
+        "@deivshon/types-toolkit": "workspace:*"
     },
     "devDependencies": {
-        "@internal/tsdown-configs": "workspace:*",
-        "@deivshon/types-toolkit": "workspace:*"
+        "@build/tsdown-configs": "workspace:*"
     },
     "scripts": {
         "build": "tsdown",

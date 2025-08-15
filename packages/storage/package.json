@@ -24,7 +24,7 @@
         "dev": "tsdown --watch"
     },
     "devDependencies": {
-        "@internal/tsdown-configs": "workspace:*",
+        "@build/tsdown-configs": "workspace:*",
         "@standard-schema/spec": "^1.0.0"
     },
     "sideEffects": false,
