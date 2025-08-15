@@ -2,8 +2,11 @@
     "scripts": {
         "build": "pnpm -C ./scripts/build execute",
         "dev": "pnpm build && pnpm -r --parallel --filter \"./packages/*\" dev",
+        "typecheck": "pnpm -r --parallel --filter \"./packages/*\" typecheck",
+        "lint": "pnpm -r --parallel --filter \"./packages/*\" lint",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "checklist": "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check",
         "clean": "rm -rf ./packages/*/dist ./scripts/*/dist ./configs/*/dist ./test/*/dist ./test/*/.next",
         "purge": "pnpm clean && rm -rf node_modules ./packages/*/node_modules ./scripts/*/node_modules ./configs/*/node_modules ./test/*/node_modules"
     },
