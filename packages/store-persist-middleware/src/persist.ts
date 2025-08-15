@@ -7,7 +7,10 @@ import { StorageInstance } from "../../storage/dist/storage"
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
     persistence: {
-        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, StorageInstance]
+        [TKey in keyof NoFunctions<TState>]?: [
+            ((initial: TState[TKey]) => Serializer<TState[TKey]>) | Serializer<TState[TKey]>,
+            StorageInstance,
+        ]
     },
 ): Middleware<TState> => {
     const shouldSync = Symbol()
@@ -17,6 +20,9 @@ export const persist = <TState extends Record<string, unknown>>(
 
     const getFromStorage = (opts: { storage: "all" | Storage }) => {
         const values: Partial<TState> = {}
+        if (!initialState) {
+            return values
+        }
 
         const storedCache = new Map<Storage, Partial<Record<string, string>>>()
         for (const key in persistence) {
@@ -44,7 +50,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 continue
             }
 
-            const deserialized = serializer.deserialize(stored[key])
+            const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(stored[key])
             values[key] = deserialized
         }
 
@@ -128,7 +134,7 @@ export const persist = <TState extends Record<string, unknown>>(
             }
         },
         onUpdate: (update, newState, meta) => {
-            if (meta[shouldSync] === false) {
+            if (!initialState || meta[shouldSync] === false) {
                 return
             }
 
@@ -148,7 +154,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 }
 
                 const [serializer, { storage, options }] = persistence[key]
-                const serialized = serializer.serialize(updatedValue)
+                const serialized = normalizeSerializer(serializer, initialState[key]).serialize(updatedValue)
 
                 const current = values.get(storage)
                 values.set(storage, {
@@ -166,3 +172,6 @@ export const persist = <TState extends Record<string, unknown>>(
         },
     }
 }
+
+const normalizeSerializer = <T>(raw: ((initial: T) => Serializer<T>) | Serializer<T>, initial: T): Serializer<T> =>
+    raw instanceof Function ? raw(initial) : raw

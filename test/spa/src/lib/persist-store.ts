@@ -80,8 +80,8 @@ const persistedStore = createStore<PersistedStore>(
             url2: [string, url()],
             url3: [boolean, url({ push: true })],
             url4: [date, url()],
-            profile: [schema(profileSchema, defaultProfile), local()],
-            movie: [schema(movieSchema.or("undefined | null"), undefined), url()],
+            profile: [schema(profileSchema), local()],
+            movie: [schema(movieSchema.or("null | undefined")), url()],
         }),
     ],
 )

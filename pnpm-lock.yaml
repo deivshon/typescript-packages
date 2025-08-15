@@ -90,14 +90,7 @@ importers:
         specifier: workspace:*
         version: link:../types-toolkit
 
-  packages/types-toolkit:
-    dependencies:
-      '@deivshon/serialization':
-        specifier: workspace:*
-        version: link:../serialization
-      '@deivshon/storage':
-        specifier: workspace:*
-        version: link:../storage
+  packages/types-toolkit: {}
 
   packages/url-storage-react-router-adapter:
     dependencies:

@@ -11,10 +11,6 @@
             "types": "./dist/index.d.ts"
         }
     },
-    "dependencies": {
-        "@deivshon/serialization": "workspace:*",
-        "@deivshon/storage": "workspace:*"
-    },
     "scripts": {
         "build": "tsup src",
         "typecheck": "tsc --noEmit",
