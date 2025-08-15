@@ -2,6 +2,7 @@
     "name": "@deivshon/types-toolkit",
     "version": "0.0.0",
     "license": "MIT",
+    "type": "module",
     "types": "./dist/index.d.ts",
     "files": [
         "dist"
@@ -12,11 +13,14 @@
         }
     },
     "scripts": {
-        "build": "tsup src",
+        "build": "tsdown",
         "typecheck": "tsc --noEmit",
         "typecheck:watch": "tsc --noEmit --watch",
         "lint": "eslint .",
-        "dev": "tsup src --watch"
+        "dev": "tsdown --watch"
+    },
+    "devDependencies": {
+        "@internal/tsdown-configs": "workspace:*"
     },
     "sideEffects": false,
     "repository": {

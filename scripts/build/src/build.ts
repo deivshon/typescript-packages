@@ -37,8 +37,8 @@ const main = async () => {
     }
 }
 
-const colorReset = "\x1b[0m"
-const colorFromHash = (() => {
+const colored = (() => {
+    const reset = "\x1b[0m"
     const colors = ["\x1b[31m", "\x1b[32m", "\x1b[33m", "\x1b[34m", "\x1b[35m", "\x1b[36m"]
 
     return (string: string): string => {
@@ -52,13 +52,14 @@ const colorFromHash = (() => {
             charactersSum += charCode + idx
         }
 
-        const hashedColorIndex = charactersSum % colors.length
-        return colors.at(hashedColorIndex) ?? colors[0]
+        const hashedColor = colors.at(charactersSum % colors.length) ?? colors[0]
+        return `${hashedColor}${string}${reset}`
     }
 })()
+const uncolored = (string: string): string => string.replace(/\x1b\[[0-9;]*m/g, "")
 
 const log = (prefix: string, mode: "stdout" | "stderr") => (data: unknown) => {
-    const coloredPrefix = `${colorFromHash(prefix)}${prefix}${colorReset}`
+    const coloredPrefix = colored(prefix)
     const string: string | null = (() => {
         if (!(data instanceof Buffer)) {
             return null
@@ -82,7 +83,7 @@ const log = (prefix: string, mode: "stdout" | "stderr") => (data: unknown) => {
     const write =
         mode === "stdout" ? process.stdout.write.bind(process.stdout) : process.stderr.write.bind(process.stderr)
     for (const line of string.trimEnd().split("\n")) {
-        write(`${coloredPrefix}: ${line}\n`)
+        write(`${coloredPrefix}: ${uncolored(line)}\n`)
     }
 }
 

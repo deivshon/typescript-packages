@@ -13,10 +13,18 @@ export type Package = {
 export const computePackages = (): Package[] => {
     const packages: Package[] = []
 
-    const rootPackagesDirectory = path.join(fileURLToPath(import.meta.url), "..", "..", "..", "..", "packages")
-    const packagesDirectories = readdirSync(rootPackagesDirectory, { withFileTypes: true })
-        .filter((file) => file.isDirectory())
-        .map((directory) => path.join(rootPackagesDirectory, directory.name))
+    const packagesDirectories = [
+        path.join(repositoryRootDirectory, "packages"),
+        path.join(repositoryRootDirectory, "configs"),
+    ].reduce<string[]>(
+        (acc, baseDirectory) => [
+            ...acc,
+            ...readdirSync(baseDirectory, { withFileTypes: true })
+                .filter((file) => file.isDirectory())
+                .map((directory) => path.join(baseDirectory, directory.name)),
+        ],
+        [],
+    )
 
     for (const packageDirectory of packagesDirectories) {
         const packageJsonFile = readdirSync(packageDirectory, { withFileTypes: true })
@@ -71,3 +79,5 @@ const packageJsonSchema = z.object({
     devDependencies: z.record(z.string(), z.string()).default({}),
     peerDependencies: z.record(z.string(), z.string()).default({}),
 })
+
+const repositoryRootDirectory = path.join(fileURLToPath(import.meta.url), "..", "..", "..", "..")

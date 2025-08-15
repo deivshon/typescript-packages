@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint"
 
 export const baseEsLintConfig = tseslint.config(
     {
-        ignores: ["tsconfig.json", "tsup.config.ts", "dist", "eslint.config.mjs"],
+        ignores: ["tsconfig.json", "tsdown.config.ts", "dist", "eslint.config.mjs"],
     },
     {
         files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"],
