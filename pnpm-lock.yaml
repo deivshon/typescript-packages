@@ -136,6 +136,9 @@ importers:
       '@deivshon/serialization':
         specifier: workspace:*
         version: link:../../packages/serialization
+      '@deivshon/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@deivshon/store-persist-middleware':
         specifier: workspace:*
         version: link:../../packages/store-persist-middleware

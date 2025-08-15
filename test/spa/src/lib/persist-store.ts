@@ -1,6 +1,7 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
 import { boolean, date, number, schema, string } from "@deivshon/serialization"
-import { persist, persistLocal, persistSession, persistUrl } from "@deivshon/store-persist-middleware"
+import { local, session, url } from "@deivshon/storage"
+import { persist } from "@deivshon/store-persist-middleware"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
 import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "./schema/profile"
 
@@ -67,20 +68,20 @@ const persistedStore = createStore<PersistedStore>(
     }),
     [
         persist("persisted-store", {
-            local1: [number, persistLocal()],
-            local2: [string, persistLocal()],
-            local3: [boolean, persistLocal()],
-            local4: [date, persistLocal()],
-            session1: [number, persistSession()],
-            session2: [string, persistSession()],
-            session3: [boolean, persistSession()],
-            session4: [date, persistSession()],
-            url1: [number, persistUrl({ push: true })],
-            url2: [string, persistUrl()],
-            url3: [boolean, persistUrl({ push: true })],
-            url4: [date, persistUrl()],
-            profile: [schema(profileSchema, defaultProfile), persistLocal()],
-            movie: [schema(movieSchema.or("undefined | null"), undefined), persistUrl()],
+            local1: [number, local()],
+            local2: [string, local()],
+            local3: [boolean, local()],
+            local4: [date, local()],
+            session1: [number, session()],
+            session2: [string, session()],
+            session3: [boolean, session()],
+            session4: [date, session()],
+            url1: [number, url({ push: true })],
+            url2: [string, url()],
+            url3: [boolean, url({ push: true })],
+            url4: [date, url()],
+            profile: [schema(profileSchema, defaultProfile), local()],
+            movie: [schema(movieSchema.or("undefined | null"), undefined), url()],
         }),
     ],
 )

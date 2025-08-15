@@ -1,4 +1,4 @@
-import { GlobalStorage } from "./storage"
+import { GlobalStorage, GlobalStorageInstance } from "./storage"
 
 type UrlStateControls = {
     get: () => Array<[string, string]>
@@ -47,7 +47,7 @@ const parseUrlStorageOptions = (options: Partial<Record<never, unknown>>): Requi
     push: "push" in options && typeof options.push === "boolean" ? options.push : false,
 })
 
-export const url: GlobalStorage = (() => {
+const $url: GlobalStorage = (() => {
     const get: GlobalStorage["get"] = () => {
         const entries = urlStateControls
             ? urlStateControls.get()
@@ -115,3 +115,8 @@ export const url: GlobalStorage = (() => {
         subscribe,
     }
 })()
+
+export const url = (options: UrlStorageOptions = {}): GlobalStorageInstance => ({
+    storage: $url,
+    options,
+})

@@ -2,16 +2,12 @@ import { Serializer } from "@deivshon/serialization"
 import { GlobalStorage, Storage } from "@deivshon/storage"
 import { Middleware, Store } from "@deivshon/store"
 import { NoFunctions } from "@deivshon/types-toolkit"
-
-export type StoragePersistence = {
-    storage: Storage
-    options: Partial<Record<PropertyKey, unknown>>
-}
+import { StorageInstance } from "../../storage/dist/storage"
 
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
     persistence: {
-        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, StoragePersistence]
+        [TKey in keyof NoFunctions<TState>]?: [Serializer<TState[TKey]>, StorageInstance]
     },
 ): Middleware<TState> => {
     const shouldSync = Symbol()
@@ -60,7 +56,7 @@ export const persist = <TState extends Record<string, unknown>>(
             Storage,
             {
                 update: Partial<Record<string, string>>
-                options: Partial<Record<string, StoragePersistence["options"]>>
+                options: Partial<Record<string, StorageInstance["options"]>>
             }
         >,
     ): void => {
@@ -140,7 +136,7 @@ export const persist = <TState extends Record<string, unknown>>(
                 Storage,
                 {
                     update: Partial<Record<string, string>>
-                    options: Partial<Record<string, StoragePersistence["options"]>>
+                    options: Partial<Record<string, StorageInstance["options"]>>
                 }
             >()
 

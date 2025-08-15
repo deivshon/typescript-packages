@@ -1,6 +1,3 @@
-import { local, session } from "./native"
-import { url } from "./url"
-
 export type NamedStorage = {
     type: "named"
     get: (name: string) => Partial<Record<string, string>>
@@ -9,6 +6,10 @@ export type NamedStorage = {
         value: Partial<Record<string, string>>,
         options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
     ) => void
+}
+export type NamedStorageInstance = {
+    storage: NamedStorage
+    options: Partial<Record<PropertyKey, unknown>>
 }
 
 export type GlobalStorage = {
@@ -20,11 +21,10 @@ export type GlobalStorage = {
     ) => void
     subscribe?: (callback: () => void) => () => void
 }
+export type GlobalStorageInstance = {
+    storage: GlobalStorage
+    options: Partial<Record<PropertyKey, unknown>>
+}
 
 export type Storage = NamedStorage | GlobalStorage
-
-export const storage = {
-    local,
-    session,
-    url,
-}
+export type StorageInstance = NamedStorageInstance | GlobalStorageInstance
