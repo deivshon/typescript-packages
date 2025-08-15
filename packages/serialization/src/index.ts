@@ -1,1 +1,12 @@
-export { boolean, date, nullable, number, optional, schema, string, type Serializer } from "./serializer"
+export {
+    boolean,
+    date,
+    nullable,
+    number,
+    optional,
+    schema,
+    schemaWithFallback,
+    set,
+    string,
+    type Serializer,
+} from "./serializer"

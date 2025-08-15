@@ -40,6 +40,7 @@ export const RootPage = () => {
                     <RootSimpleStoreString key={idx} />
                 ))}
             </div>
+            <RootPageNumberSet />
         </div>
     )
 }
@@ -192,6 +193,19 @@ const RootSimpleStoreString = () => {
     const string = useSimpleStore(simpleStoreStringSelector)
 
     return <span style={{ marginRight: "1rem" }}>{string}</span>
+}
+
+const RootPageNumberSet = () => {
+    const { numberSet, randomizeNumberSet } = usePersistedStore((state) => state)
+
+    return (
+        <div style={columnStyle}>
+            <span>{Array.from(numberSet).map(String).join(",")}</span>
+            <button type="button" onClick={randomizeNumberSet} style={{ width: "fit-content" }}>
+                Randomize number set
+            </button>
+        </div>
+    )
 }
 
 const columnStyle: React.CSSProperties = {
