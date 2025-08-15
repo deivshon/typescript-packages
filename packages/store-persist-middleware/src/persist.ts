@@ -1,8 +1,7 @@
 import { Serializer } from "@deivshon/serialization"
-import { GlobalStorage, Storage } from "@deivshon/storage"
+import { GlobalStorage, Storage, StorageInstance } from "@deivshon/storage"
 import { Middleware, Store } from "@deivshon/store"
 import { NoFunctions } from "@deivshon/types-toolkit"
-import { StorageInstance } from "../../storage/dist/storage"
 
 export const persist = <TState extends Record<string, unknown>>(
     name: string,
