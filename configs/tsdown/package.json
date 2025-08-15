@@ -3,6 +3,9 @@
     "version": "0.0.0",
     "license": "MIT",
     "type": "module",
+    "scripts": {
+        "build": "tsdown"
+    },
     "module": "./dist/index.mjs",
     "main": "./dist/index.cjs",
     "types": "./dist/index.d.ts",
@@ -15,8 +18,5 @@
             "import": "./dist/index.js",
             "require": "./dist/index.cjs"
         }
-    },
-    "scripts": {
-        "build": "tsdown"
     }
 }

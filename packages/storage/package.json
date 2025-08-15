@@ -3,6 +3,13 @@
     "version": "0.0.0",
     "license": "MIT",
     "type": "module",
+    "scripts": {
+        "build": "tsdown",
+        "dev": "tsdown --watch",
+        "typecheck": "tsc --noEmit",
+        "typecheck:watch": "tsc --noEmit --watch",
+        "lint": "eslint ."
+    },
     "module": "./dist/index.mjs",
     "main": "./dist/index.cjs",
     "types": "./dist/index.d.ts",
@@ -15,13 +22,6 @@
             "import": "./dist/index.js",
             "require": "./dist/index.cjs"
         }
-    },
-    "scripts": {
-        "build": "tsdown",
-        "typecheck": "tsc --noEmit",
-        "typecheck:watch": "tsc --noEmit --watch",
-        "lint": "eslint .",
-        "dev": "tsdown --watch"
     },
     "devDependencies": {
         "@build/tsdown-configs": "workspace:*",
