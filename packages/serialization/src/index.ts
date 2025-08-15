@@ -1,6 +1,8 @@
 export { boolean } from "./boolean"
 export { date } from "./date"
+export { nullable } from "./nullable"
 export { number } from "./number"
+export { optional } from "./optional"
 export { schema } from "./schema"
 export { type Serializer } from "./serde"
 export { string } from "./string"

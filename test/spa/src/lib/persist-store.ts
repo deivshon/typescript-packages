@@ -1,5 +1,5 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
-import { boolean, date, number, schema, string } from "@deivshon/serialization"
+import { boolean, date, nullable, number, schema, string } from "@deivshon/serialization"
 import { local, session, url } from "@deivshon/storage"
 import { persist } from "@deivshon/store-persist-middleware"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
@@ -21,7 +21,7 @@ type PersistedStore = {
     url1: number
     url2: string
     url3: boolean
-    url4: Date
+    url4: Date | null
     profile: Profile
     movie: Movie | undefined | null
     randomize1: () => void
@@ -79,7 +79,7 @@ const persistedStore = createStore<PersistedStore>(
             url1: [number, url({ push: true })],
             url2: [string, url()],
             url3: [boolean, url({ push: true })],
-            url4: [date, url()],
+            url4: [nullable(date), url()],
             profile: [schema(profileSchema), local()],
             movie: [schema(movieSchema.or("null | undefined")), url()],
         }),
@@ -110,7 +110,7 @@ const random4 = (): Partial<PersistedStore> => ({
     memory4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
     local4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
     session4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
-    url4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
+    url4: Math.random() > 0.9 ? null : new Date(Math.floor(Math.random() * Date.now())),
 })
 const randomNonPrimitives = (): Partial<PersistedStore> => ({
     profile: makeRandomProfile(),
