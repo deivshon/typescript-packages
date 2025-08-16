@@ -1,6 +1,7 @@
 export {
     boolean,
     date,
+    map,
     nullable,
     number,
     optional,

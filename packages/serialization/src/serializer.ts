@@ -71,6 +71,47 @@ export const set =
         },
     })
 
+export const map =
+    <TKey, TValue>(keySerializer: Serializer<TKey>, valueSerializer: Serializer<TValue>) =>
+    (initial: Map<TKey, TValue>): Serializer<Map<TKey, TValue>> => ({
+        serialize: (value) =>
+            enhancedJsonStringify(
+                Array.from(
+                    value
+                        .entries()
+                        .map(([key, value]) => [keySerializer.serialize(key), valueSerializer.serialize(value)]),
+                ),
+            ),
+        deserialize: (serialized) => {
+            try {
+                const deserialized = enhancedJsonParse(serialized)
+                if (!Array.isArray(deserialized)) {
+                    return initial
+                }
+                const unknownEntriesArray: unknown[] = deserialized
+
+                const entries: Array<[TKey, TValue]> = []
+                for (const unknownEntry of unknownEntriesArray) {
+                    if (!Array.isArray(unknownEntry) || unknownEntry.length > 2) {
+                        return initial
+                    }
+
+                    const key: unknown = unknownEntry.at(0)
+                    const value: unknown = unknownEntry.at(1)
+                    if (typeof key !== "string" || typeof value !== "string") {
+                        return initial
+                    }
+
+                    entries.push([keySerializer.deserialize(key), valueSerializer.deserialize(value)])
+                }
+
+                return new Map(entries)
+            } catch {
+                return initial
+            }
+        },
+    })
+
 export type SchemaSerializable =
     | string
     | number

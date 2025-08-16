@@ -41,6 +41,7 @@ export const RootPage = () => {
                 ))}
             </div>
             <RootPageNumberSet />
+            <RootPageNumberMap />
         </div>
     )
 }
@@ -203,6 +204,23 @@ const RootPageNumberSet = () => {
             <span>{Array.from(numberSet).map(String).join(",")}</span>
             <button type="button" onClick={randomizeNumberSet} style={{ width: "fit-content" }}>
                 Randomize number set
+            </button>
+        </div>
+    )
+}
+
+const RootPageNumberMap = () => {
+    const { numberMap, randomizeNumberMap } = usePersistedStore((state) => state)
+
+    return (
+        <div style={columnStyle}>
+            <span>
+                {Array.from(numberMap.entries())
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(",")}
+            </span>
+            <button type="button" onClick={randomizeNumberMap} style={{ width: "fit-content" }}>
+                Randomize number map
             </button>
         </div>
     )

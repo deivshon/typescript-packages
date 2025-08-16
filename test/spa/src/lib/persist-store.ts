@@ -1,5 +1,5 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
-import { boolean, date, nullable, number, schema, schemaWithFallback, set, string } from "@deivshon/serialization"
+import { boolean, date, map, nullable, number, schema, schemaWithFallback, set, string } from "@deivshon/serialization"
 import { local, session, url } from "@deivshon/storage"
 import { persist } from "@deivshon/store-persist-middleware"
 import { type } from "arktype"
@@ -26,6 +26,7 @@ type PersistedStore = {
     profile: Profile
     movie: Movie | undefined | null
     numberSet: Set<number | null>
+    numberMap: Map<number, number>
     randomize1: () => void
     randomize2: () => void
     randomize3: () => void
@@ -33,6 +34,7 @@ type PersistedStore = {
     randomizeNonPrimitives: () => void
     randomizeAll: () => void
     randomizeNumberSet: () => void
+    randomizeNumberMap: () => void
 }
 
 const persistedStore = createStore<PersistedStore>(
@@ -56,11 +58,16 @@ const persistedStore = createStore<PersistedStore>(
         profile: defaultProfile,
         movie: undefined,
         numberSet: new Set([1, 2, 3]),
+        numberMap: new Map([
+            [1, 2],
+            [2, 3],
+        ]),
         randomize1: () => set(random1()),
         randomize2: () => set(random2()),
         randomize3: () => set(random3()),
         randomize4: () => set(random4()),
         randomizeNonPrimitives: () => set(randomNonPrimitives()),
+        randomizeNumberMap: () => set(randomNumberMap()),
         randomizeAll: () =>
             set({
                 ...random1(),
@@ -69,6 +76,7 @@ const persistedStore = createStore<PersistedStore>(
                 ...random4(),
                 ...randomNonPrimitives(),
                 ...randomNumberSet(),
+                ...randomNumberMap(),
             }),
         randomizeNumberSet: () => set(randomNumberSet()),
     }),
@@ -89,6 +97,7 @@ const persistedStore = createStore<PersistedStore>(
             profile: [schema(profileSchema), local()],
             movie: [schema(movieSchema.or("null | undefined")), url()],
             numberSet: [set(schemaWithFallback(type("number | null"), null)), url()],
+            numberMap: [map(number, number), url()],
         }),
     ],
 )
@@ -127,6 +136,13 @@ const randomNumberSet = () => ({
     numberSet: new Set(
         Array.from({ length: Math.floor(Math.random() * 100) }).map((_, idx) =>
             Math.random() > 0.9 ? Math.floor(Math.random() * idx) : null,
+        ),
+    ),
+})
+const randomNumberMap = () => ({
+    numberMap: new Map(
+        Array.from({ length: Math.floor(Math.random() * 10) }).map(
+            (_, idx) => [idx, Math.floor(Math.random() * 10)] as const,
         ),
     ),
 })
