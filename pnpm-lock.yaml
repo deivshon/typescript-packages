@@ -57,6 +57,12 @@ importers:
         specifier: ^19.1.1
         version: 19.1.1
 
+  packages/result:
+    devDependencies:
+      '@build/tsdown-configs':
+        specifier: workspace:*
+        version: link:../../configs/tsdown
+
   packages/serialization:
     devDependencies:
       '@build/tsdown-configs':
