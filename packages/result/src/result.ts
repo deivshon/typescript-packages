@@ -49,6 +49,11 @@ export const err = <const TError, const TValue = never>(error: TError): Result<T
     ) => errAsync<TError | TBoundError, TBoundValue>(error),
 })
 
+export const result = {
+    ok,
+    err,
+}
+
 export type ResultAsync<TValue, TError> = {
     async: true
     then: <const TFulfilled, const TRejected>(
@@ -119,44 +124,42 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
 export const fromPromise = <const TValue, const TError>(
     promise: Promise<TValue>,
     errorHandler: (error: unknown) => TError | Promise<TError>,
-): ResultAsync<TValue, TError> => {
-    return {
-        async: true,
-        then: <const TFulfilled, const TRejected>(
-            onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-            onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-        ) =>
-            promise
-                .then((value) => ok<TValue, TError>(value))
-                .catch(async (error: unknown) => err<TError, TValue>(await errorHandler(error)))
-                .then(onFulfilled, onRejected),
-        unwrapOr: <const TOr>(or: TOr) => promise.then((value) => value).catch(() => or),
-        map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>) =>
-            fromPromise<TMappedValue, TError>(
-                promise.then(async (value) => await mapper(value)),
-                errorHandler,
-            ),
-        mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError | Promise<TMappedError>) =>
-            fromPromise<TValue, TMappedError>(promise, async (error) => await mapper(await errorHandler(error))),
-        bind: <const TBoundValue, const TBoundError>(
-            binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
-        ) => {
-            const [createBoundError, isBoundError] = brandedError<TBoundError>("")
+): ResultAsync<TValue, TError> => ({
+    async: true,
+    then: <const TFulfilled, const TRejected>(
+        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
+        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
+    ) =>
+        promise
+            .then((value) => ok<TValue, TError>(value))
+            .catch(async (error: unknown) => err<TError, TValue>(await errorHandler(error)))
+            .then(onFulfilled, onRejected),
+    unwrapOr: <const TOr>(or: TOr) => promise.then((value) => value).catch(() => or),
+    map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>) =>
+        fromPromise<TMappedValue, TError>(
+            promise.then(async (value) => await mapper(value)),
+            errorHandler,
+        ),
+    mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError | Promise<TMappedError>) =>
+        fromPromise<TValue, TMappedError>(promise, async (error) => await mapper(await errorHandler(error))),
+    bind: <const TBoundValue, const TBoundError>(
+        binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
+    ) => {
+        const [createBoundError, isBoundError] = brandedError<TBoundError>("")
 
-            return fromPromise<TBoundValue, TError | TBoundError>(
-                promise.then(async (value) => {
-                    const bound = await binder(value)
-                    if (bound.success) {
-                        return bound.value
-                    } else {
-                        throw createBoundError(bound.error, "")
-                    }
-                }),
-                (error) => (isBoundError(error) ? error.value : errorHandler(error)),
-            )
-        },
-    }
-}
+        return fromPromise<TBoundValue, TError | TBoundError>(
+            promise.then(async (value) => {
+                const bound = await binder(value)
+                if (bound.success) {
+                    return bound.value
+                } else {
+                    throw createBoundError(bound.error, "")
+                }
+            }),
+            (error) => (isBoundError(error) ? error.value : errorHandler(error)),
+        )
+    },
+})
 
 const fromSafeValuePromise = <const TValue, const TError>(
     valuePromise: Promise<TValue>,
@@ -213,6 +216,50 @@ export const fromSafeErrorPromise = <const TError, const TValue = never>(
         _: (_: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => fromSafeErrorPromise<TError | TBoundError, TBoundValue>(errorPromise),
 })
+
+export const fromAsyncFn =
+    <const TArgs extends readonly unknown[], TReturn>(fn: (...args: TArgs) => Promise<TReturn>) =>
+    (...args: TArgs): ResultAsync<TReturn, unknown> =>
+        fromPromise(fn(...args), (error) => error)
+
+export const fromResultPromise = <const TValue, const TError>(
+    resultPromise: Promise<Result<TValue, TError>>,
+): ResultAsync<TValue, TError> => {
+    const [createResultError, isResultError] = brandedError<TError>("")
+
+    return fromPromise(
+        resultPromise.then((result) => {
+            if (result.success) {
+                return result.value
+            } else {
+                throw createResultError(result.error, "")
+            }
+        }),
+        (error) => {
+            if (isResultError(error)) {
+                return error.value
+            } else {
+                throw error
+            }
+        },
+    )
+}
+export const fromAsyncResultFn =
+    <const TArgs extends readonly unknown[], const TValue, const TError>(
+        asyncFn: (...args: TArgs) => Promise<Result<TValue, TError>>,
+    ) =>
+    (...args: TArgs): ResultAsync<TValue, TError> =>
+        fromResultPromise(asyncFn(...args))
+
+export const resultAsync = {
+    ok: okAsync,
+    err: errAsync,
+    fromPromise,
+    fromFn: fromAsyncFn,
+    fromSafePromise: fromSafeValuePromise,
+    fromResultPromise,
+    fromResultFn: fromAsyncResultFn,
+}
 
 const brandedError = <T>(name: string) => {
     class BrandedError extends globalThis.Error {
