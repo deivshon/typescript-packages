@@ -1,2 +1,2 @@
-export { err, ok, type Result } from "./result"
+export { err, errAsync, fromPromise, ok, okAsync, type Result, type ResultAsync } from "./result"
 export { tryAsync, trySync } from "./try"

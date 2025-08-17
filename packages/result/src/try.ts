@@ -1,4 +1,4 @@
-import { Result, err, ok } from "./result"
+import { Result, ResultAsync, err, fromPromise, ok } from "./result"
 
 export const trySync =
     <TArgs extends readonly unknown[], TReturn>(fn: (...args: TArgs) => TReturn) =>
@@ -12,10 +12,5 @@ export const trySync =
 
 export const tryAsync =
     <TArgs extends readonly unknown[], TReturn>(fn: (...args: TArgs) => Promise<TReturn>) =>
-    async (...args: TArgs): Promise<Result<TReturn, unknown>> => {
-        try {
-            return ok(await fn(...args))
-        } catch (error) {
-            return err(error)
-        }
-    }
+    (...args: TArgs): ResultAsync<TReturn, unknown> =>
+        fromPromise(fn(...args), (error) => error)
