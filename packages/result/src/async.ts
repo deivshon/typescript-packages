@@ -1,4 +1,6 @@
 import { brandedError } from "./internal/branded-error"
+import { tap } from "./internal/effects"
+import { identity } from "./internal/values"
 import { Result, err, ok } from "./sync"
 
 export type ResultAsync<TValue, TError> = {
@@ -17,6 +19,8 @@ export type ResultAsync<TValue, TError> = {
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
+    effect: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
+    effectErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
 }
 
 export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> => ({
@@ -43,6 +47,8 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
               ? okAsync<TBoundValue, TBoundError>(bound.value)
               : errAsync<TBoundError, TBoundValue>(bound.error)
     },
+    effect: (effect) => tap(value, effect, okAsync),
+    effectErr: () => okAsync(value),
 })
 
 export const errAsync = <const TError, const TValue = never>(error: TError): ResultAsync<TValue, TError> => ({
@@ -58,6 +64,8 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
         return mapped instanceof Promise ? fromSafeErrorPromise<TMappedError, TValue>(mapped) : errAsync(mapped)
     },
     bind: <const TBoundValue, const TBoundError>() => errAsync<TError | TBoundError, TBoundValue>(error),
+    effect: () => errAsync(error),
+    effectErr: (effect) => tap(error, effect, errAsync),
 })
 
 export const fromPromise = <const TValue, const TError>(
@@ -98,6 +106,12 @@ export const fromPromise = <const TValue, const TError>(
             (error) => (isBoundError(error) ? error.value : errorHandler(error)),
         )
     },
+    effect: (effect) =>
+        fromPromise(
+            promise.then((value) => tap(value, effect, identity)),
+            errorHandler,
+        ),
+    effectErr: (effect) => fromPromise(promise, async (error) => tap(await errorHandler(error), effect, identity)),
 })
 
 export const fromSafeValuePromise = <const TValue, const TError>(
@@ -135,6 +149,8 @@ export const fromSafeValuePromise = <const TValue, const TError>(
             },
         )
     },
+    effect: (effect) => fromSafeValuePromise(valuePromise.then((value) => tap(value, effect, identity))),
+    effectErr: () => fromSafeValuePromise(valuePromise),
 })
 
 const fromSafeErrorPromise = <const TError, const TValue = never>(
@@ -151,6 +167,8 @@ const fromSafeErrorPromise = <const TError, const TValue = never>(
         fromSafeErrorPromise<TMappedError, TValue>(errorPromise.then(async (error) => await mapper(error))),
     bind: <const TBoundValue, const TBoundError>() =>
         fromSafeErrorPromise<TError | TBoundError, TBoundValue>(errorPromise),
+    effect: () => fromSafeErrorPromise(errorPromise),
+    effectErr: (effect) => fromSafeErrorPromise(errorPromise.then((error) => tap(error, effect, identity))),
 })
 
 export const fromSafeResultPromise = <const TValue, const TError>(

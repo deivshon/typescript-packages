@@ -1,4 +1,5 @@
 import { errAsync, ResultAsync } from "./async"
+import { tap } from "./internal/effects"
 
 type Ok<TValue> = {
     success: true
@@ -21,6 +22,8 @@ export type Result<TValue, TError> = (Ok<TValue> | Error<TError>) & {
     asyncBind: <const TBoundValue, const TBoundError>(
         asyncBinder: (value: TValue) => ResultAsync<TBoundValue, TError | TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
+    effect: (effect: (value: TValue) => unknown) => Result<TValue, TError>
+    effectErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
 }
 
 export const ok = <const TValue, const TError = never>(value: TValue): Result<TValue, TError> => ({
@@ -35,6 +38,8 @@ export const ok = <const TValue, const TError = never>(value: TValue): Result<TV
     asyncBind: <const TBoundValue, const TBoundError>(
         asyncBinder: (value: TValue) => ResultAsync<TBoundValue, TError | TBoundError>,
     ) => asyncBinder(value),
+    effect: (effect) => tap(value, effect, ok),
+    effectErr: () => ok(value),
 })
 
 export const err = <const TError, const TValue = never>(error: TError): Result<TValue, TError> => ({
@@ -46,6 +51,8 @@ export const err = <const TError, const TValue = never>(error: TError): Result<T
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => err(mapper(error)),
     bind: <const TBoundValue, const TBoundError>() => err<TError | TBoundError, TBoundValue>(error),
     asyncBind: <const TBoundValue, const TBoundError>() => errAsync<TError | TBoundError, TBoundValue>(error),
+    effect: () => err(error),
+    effectErr: (effect) => tap(error, effect, err),
 })
 
 export const trySync = <TReturn>(fn: () => TReturn): Result<TReturn, unknown> => {
