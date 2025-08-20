@@ -25,27 +25,16 @@ export type ResultAsync<TValue, TError> = {
 
 export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> => ({
     async: true,
-    then: <const TFulfilled, const TRejected>(
-        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-    ) => Promise.resolve<Result<TValue, TError>>(ok(value)).then(onFulfilled, onRejected),
+    then: (onFulfilled, onRejected) => Promise.resolve(ok(value)).then(onFulfilled, onRejected),
     unwrapOr: () => Promise.resolve(value),
-    map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>) => {
+    map: (mapper) => {
         const mapped = mapper(value)
-        return mapped instanceof Promise
-            ? fromSafeValuePromise<TMappedValue, TError>(mapped)
-            : okAsync<TMappedValue, TError>(mapped)
+        return mapped instanceof Promise ? fromSafeValuePromise(mapped) : okAsync(mapped)
     },
-    mapErr: <const TMappedError>() => okAsync<TValue, TMappedError>(value),
-    bind: <const TBoundValue, const TBoundError>(
-        binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
-    ) => {
+    mapErr: () => okAsync(value),
+    bind: (binder) => {
         const bound = binder(value)
-        return bound.async
-            ? bound
-            : bound.success
-              ? okAsync<TBoundValue, TBoundError>(bound.value)
-              : errAsync<TBoundError, TBoundValue>(bound.error)
+        return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
     },
     effect: (effect) => tap(value, effect, okAsync),
     effectErr: () => okAsync(value),
@@ -53,17 +42,14 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
 
 export const errAsync = <const TError, const TValue = never>(error: TError): ResultAsync<TValue, TError> => ({
     async: true,
-    then: <const TFulfilled, const TRejected>(
-        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-    ) => Promise.resolve<Result<TValue, TError>>(err(error)).then(onFulfilled, onRejected),
-    unwrapOr: <const TOr>(or: TOr) => Promise.resolve(or),
-    map: <const TMappedValue>() => errAsync<TError, TMappedValue>(error),
-    mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError | Promise<TMappedError>) => {
+    then: (onFulfilled, onRejected) => Promise.resolve(err(error)).then(onFulfilled, onRejected),
+    unwrapOr: (or) => Promise.resolve(or),
+    map: () => errAsync(error),
+    mapErr: (mapper) => {
         const mapped = mapper(error)
-        return mapped instanceof Promise ? fromSafeErrorPromise<TMappedError, TValue>(mapped) : errAsync(mapped)
+        return mapped instanceof Promise ? fromSafeErrorPromise(mapped) : errAsync(mapped)
     },
-    bind: <const TBoundValue, const TBoundError>() => errAsync<TError | TBoundError, TBoundValue>(error),
+    bind: () => errAsync(error),
     effect: () => errAsync(error),
     effectErr: (effect) => tap(error, effect, errAsync),
 })
@@ -73,22 +59,18 @@ export const fromPromise = <const TValue, const TError>(
     errorHandler: (error: unknown) => TError | Promise<TError>,
 ): ResultAsync<TValue, TError> => ({
     async: true,
-    then: <const TFulfilled, const TRejected>(
-        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-    ) =>
+    then: (onFulfilled, onRejected) =>
         promise
-            .then<Result<TValue, TError>>((value) => ok(value))
-            .catch<Result<TValue, TError>>(async (error: unknown) => err(await errorHandler(error)))
+            .then((value) => ok(value))
+            .catch(async (error: unknown) => err(await errorHandler(error)))
             .then(onFulfilled, onRejected),
-    unwrapOr: <const TOr>(or: TOr) => promise.then((value) => value).catch(() => or),
-    map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>) =>
-        fromPromise<TMappedValue, TError>(
+    unwrapOr: (or) => promise.then((value) => value).catch(() => or),
+    map: (mapper) =>
+        fromPromise(
             promise.then(async (value) => await mapper(value)),
             errorHandler,
         ),
-    mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError | Promise<TMappedError>) =>
-        fromPromise<TValue, TMappedError>(promise, async (error) => await mapper(await errorHandler(error))),
+    mapErr: (mapper) => fromPromise(promise, async (error) => await mapper(await errorHandler(error))),
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => {
@@ -118,14 +100,10 @@ export const fromSafeValuePromise = <const TValue, const TError>(
     valuePromise: Promise<TValue>,
 ): ResultAsync<TValue, TError> => ({
     async: true,
-    then: <const TFulfilled, const TRejected>(
-        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-    ) => valuePromise.then<Result<TValue, TError>>((value) => ok(value)).then(onFulfilled, onRejected),
+    then: (onFulfilled, onRejected) => valuePromise.then((value) => ok(value)).then(onFulfilled, onRejected),
     unwrapOr: () => valuePromise,
-    map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>) =>
-        fromSafeValuePromise<TMappedValue, TError>(valuePromise.then(async (value) => await mapper(value))),
-    mapErr: <const TMappedError>() => fromSafeValuePromise<TValue, TMappedError>(valuePromise),
+    map: (mapper) => fromSafeValuePromise(valuePromise.then(async (value) => await mapper(value))),
+    mapErr: () => fromSafeValuePromise(valuePromise),
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => {
@@ -157,16 +135,11 @@ const fromSafeErrorPromise = <const TError, const TValue = never>(
     errorPromise: Promise<TError>,
 ): ResultAsync<TValue, TError> => ({
     async: true,
-    then: <const TFulfilled, const TRejected>(
-        onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
-        onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
-    ) => errorPromise.then((error) => err<TError, TValue>(error)).then(onFulfilled, onRejected),
-    unwrapOr: <const TOr>(or: TOr) => Promise.resolve(or),
-    map: <const TMappedValue>() => fromSafeErrorPromise<TError, TMappedValue>(errorPromise),
-    mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError | Promise<TMappedError>) =>
-        fromSafeErrorPromise<TMappedError, TValue>(errorPromise.then(async (error) => await mapper(error))),
-    bind: <const TBoundValue, const TBoundError>() =>
-        fromSafeErrorPromise<TError | TBoundError, TBoundValue>(errorPromise),
+    then: (onFulfilled, onRejected) => errorPromise.then((error) => err(error)).then(onFulfilled, onRejected),
+    unwrapOr: (or) => Promise.resolve(or),
+    map: () => fromSafeErrorPromise(errorPromise),
+    mapErr: (mapper) => fromSafeErrorPromise(errorPromise.then(async (error) => await mapper(error))),
+    bind: () => fromSafeErrorPromise(errorPromise),
     effect: () => fromSafeErrorPromise(errorPromise),
     effectErr: (effect) => fromSafeErrorPromise(errorPromise.then((error) => tap(error, effect, identity))),
 })
