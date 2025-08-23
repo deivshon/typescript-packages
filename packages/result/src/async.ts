@@ -146,7 +146,7 @@ export const safeguardAsync =
     (...args: TArgs): ResultAsync<TReturn, unknown> =>
         tryAsync(() => fn(...args))
 
-export const resultAsync = {
+export const ResultAsync = {
     ok: okAsync,
     err: errAsync,
     try: tryAsync,

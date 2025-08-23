@@ -4,9 +4,9 @@ export {
     fromSafeValuePromise as fromSafePromise,
     fromSafeResultPromise,
     okAsync,
-    resultAsync,
+    ResultAsync,
     safeguardAsync,
     tryAsync,
-    type ResultAsync,
 } from "./async"
-export { err, ok, result, safeguardSync, trySync, type Result } from "./sync"
+
+export { err, ok, Result, safeguardSync, trySync } from "./sync"

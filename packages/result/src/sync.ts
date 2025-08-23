@@ -65,7 +65,7 @@ export const safeguardSync =
     (...args: TArgs): Result<TReturn, unknown> =>
         trySync(() => fn(...args))
 
-export const result = {
+export const Result = {
     ok,
     err,
     try: trySync,
