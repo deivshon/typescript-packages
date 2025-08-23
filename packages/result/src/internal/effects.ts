@@ -1,8 +1,6 @@
-export const tap = <const TValue, const TReturn>(
+export const tap = <const TValue, const TEffectReturn, const TDerivedFromEffectReturn, const TReturn>(
     value: TValue,
-    effect: (value: TValue) => unknown,
-    build: (value: TValue) => TReturn,
-) => {
-    void effect(value)
-    return build(value)
-}
+    effect: (value: TValue) => TEffectReturn,
+    derive: (effectReturn: TEffectReturn) => TDerivedFromEffectReturn,
+    build: (derived: TDerivedFromEffectReturn) => TReturn,
+) => build(derive(effect(value)))

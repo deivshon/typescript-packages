@@ -1,4 +1,4 @@
-import { errAsync, ResultAsync } from "./async"
+import { errAsync, fromSafePromise, ResultAsync } from "./async"
 import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { identity } from "./internal/values"
@@ -6,6 +6,9 @@ import { identity } from "./internal/values"
 type Functions<TValue, TError> = {
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
+    asyncMap: <const TMappedValue>(
+        mapper: (value: TValue) => Promise<TMappedValue>,
+    ) => ResultAsync<TMappedValue, TError>
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TError | TBoundError>,
     ) => Result<TBoundValue, TError | TBoundError>
@@ -17,6 +20,12 @@ type Functions<TValue, TError> = {
     ) => ResultAsync<TBoundValue, TError | TBoundError>
     effect: (effect: (value: TValue) => unknown) => Result<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
+    through: <const TEffectError>(
+        effect: (value: TValue) => Result<unknown, TEffectError>,
+    ) => Result<TValue, TError | TEffectError>
+    asyncThrough: <const TEffectError>(
+        effect: (value: TValue) => ResultAsync<unknown, TEffectError>,
+    ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => TValue | TOr
     unwrapErrOr<const TOr>(value: TOr): TError | TOr
     dangerouslyUnwrap: () => TValue
@@ -48,20 +57,24 @@ export const ok = <const TValue>(value: TValue): Ok<TValue> => {
         value,
         map: (mapper) => ok(mapper(value)),
         mapErr: self,
+        asyncMap: (mapper) => fromSafePromise(mapper(value)),
         bind: apply,
         bindErr: self,
         asyncBind: apply,
-        effect: (effect) => tap(value, effect, ok),
+        effect: (effect) => tap(value, effect, extract, ok),
         effectErr: self,
         unwrapOr: extract,
         unwrapErrOr: identity,
         dangerouslyUnwrap: extract,
         dangerouslyUnwrapErr: throwValueUnwrapError,
+        through: (effect) => tap(value, effect, (result) => (result.success ? ok(value) : err(result.error)), identity),
+        asyncThrough: (effect) => effect(value).map(extract),
     }
 }
 
 export const err = <const TError>(error: TError): Err<TError> => {
     const self = () => err(error)
+    const asyncSelf = () => errAsync(error)
     const extract = () => error
 
     return {
@@ -70,15 +83,18 @@ export const err = <const TError>(error: TError): Err<TError> => {
         error,
         map: self,
         mapErr: (mapper) => err(mapper(error)),
+        asyncMap: asyncSelf,
         bind: self,
         bindErr: (binder) => binder(error),
-        asyncBind: () => errAsync(error),
+        asyncBind: asyncSelf,
         effect: self,
-        effectErr: (effect) => tap(error, effect, err),
+        effectErr: (effect) => tap(error, effect, extract, err),
         unwrapOr: identity,
         unwrapErrOr: extract,
         dangerouslyUnwrap: throwErrorUnwrapError,
         dangerouslyUnwrapErr: extract,
+        through: self,
+        asyncThrough: asyncSelf,
     }
 }
 

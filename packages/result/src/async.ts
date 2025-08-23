@@ -25,6 +25,9 @@ export type ResultAsync<TValue, TError> = {
     ) => ResultAsync<TValue | TBoundValue, TBoundError>
     effect: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
+    through: <const TEffectError>(
+        effect: (value: TValue) => Result<unknown, TEffectError> | ResultAsync<unknown, TEffectError>,
+    ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => Promise<TValue | TOr>
     unwrapErrOr<const TOr>(value: TOr): Promise<TError | TOr>
     dangerouslyUnwrap: () => Promise<TValue>
@@ -48,8 +51,12 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
             return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
         },
         bindErr: self,
-        effect: (effect) => tap(value, effect, okAsync),
+        effect: (effect) => tap(value, effect, () => value, okAsync),
         effectErr: self,
+        through: (effect) => {
+            const result = effect(value)
+            return result.async ? result.map(() => value) : result.success ? okAsync(value) : errAsync(result.error)
+        },
         unwrapOr: extract,
         unwrapErrOr: (or) => Promise.resolve(or),
         dangerouslyUnwrap: extract,
@@ -75,7 +82,8 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
             return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
         },
         effect: self,
-        effectErr: (effect) => tap(error, effect, errAsync),
+        effectErr: (effect) => tap(error, effect, () => error, errAsync),
+        through: self,
         unwrapOr: (or) => Promise.resolve(or),
         unwrapErrOr: extract,
         dangerouslyUnwrap: rejectWithValueUnwrapError,
@@ -143,10 +151,31 @@ export const fromPromise = <const TValue, const TError>(
     },
     effect: (effect) =>
         fromPromise(
-            promise.then((value) => tap(value, effect, identity)),
+            promise.then((value) => tap(value, effect, () => value, identity)),
             errorHandler,
         ),
-    effectErr: (effect) => fromPromise(promise, async (error) => tap(await errorHandler(error), effect, identity)),
+    effectErr: (effect) =>
+        fromPromise(promise, async (error) => {
+            const normalized = await errorHandler(error)
+            return tap(normalized, effect, () => normalized, identity)
+        }),
+    through: <const TEffectError>(
+        effect: (value: TValue) => Result<unknown, TEffectError> | ResultAsync<unknown, TEffectError>,
+    ) => {
+        const [createEffectError, isEffectError] = anonymousError<TEffectError>()
+
+        return fromPromise(
+            promise.then(async (value) => {
+                const result = await effect(value)
+                if (result.success) {
+                    return value
+                } else {
+                    throw createEffectError(result.error)
+                }
+            }),
+            async (error) => (isEffectError(error) ? error.value : errorHandler(error)),
+        )
+    },
     unwrapOr: (or) => promise.catch(() => or),
     unwrapErrOr: (or) => promise.then(() => or).catch(errorHandler),
     dangerouslyUnwrap: () => promise.catch(throwValueUnwrapError),
@@ -166,12 +195,13 @@ export const fromPromise = <const TValue, const TError>(
     },
 })
 
-export const fromSafeValuePromise = <const TValue, const TError = never>(
+const fromSafeValuePromise = <const TValue, const TError = never>(
     valuePromise: Promise<TValue>,
 ): ResultAsync<TValue, TError> =>
     fromPromise(valuePromise, (error) => {
         throw error
     })
+export const fromSafePromise = fromSafeValuePromise
 
 const fromSafeErrorPromise = <const TError, const TValue = never>(
     errorPromise: Promise<TError>,
@@ -213,6 +243,6 @@ export const ResultAsync = {
     try: tryAsync,
     safeguard: safeguardAsync,
     fromPromise,
-    fromSafePromise: fromSafeValuePromise,
+    fromSafePromise,
     fromSafeResultPromise,
 }
