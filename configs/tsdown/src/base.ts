@@ -2,7 +2,7 @@ import { Options } from "tsdown"
 
 export const baseTsDownConfig: Options = {
     sourcemap: false,
-    minify: true,
+    minify: false,
     dts: true,
     format: ["esm", "cjs"],
 }
