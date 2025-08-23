@@ -117,12 +117,12 @@ const fromSafeErrorPromise = <const TError, const TValue = never>(
 })
 
 export const fromSafeResultPromise = <const TValue, const TError>(
-    resultPromise: Promise<Result<TValue, TError>>,
+    resultPromise: Promise<Result<TValue, TError>> | (() => Promise<Result<TValue, TError>>),
 ): ResultAsync<TValue, TError> => {
     const [createResultError, isResultError] = brandedError<TError>()
 
     return fromPromise(
-        resultPromise.then((result) => {
+        (resultPromise instanceof Function ? resultPromise() : resultPromise).then((result) => {
             if (result.success) {
                 return result.value
             } else {
@@ -138,12 +138,6 @@ export const fromSafeResultPromise = <const TValue, const TError>(
         },
     )
 }
-export const fromSafeAsyncResultFn =
-    <TArgs extends readonly unknown[], const TValue, const TError>(
-        asyncFn: (...args: TArgs) => Promise<Result<TValue, TError>>,
-    ) =>
-    (...args: TArgs): ResultAsync<TValue, TError> =>
-        fromSafeResultPromise(asyncFn(...args))
 
 export const tryAsync = <const TReturn>(fn: () => Promise<TReturn>) => fromPromise(fn(), (error) => error)
 
@@ -160,5 +154,4 @@ export const resultAsync = {
     fromPromise,
     fromSafePromise: fromSafeValuePromise,
     fromSafeResultPromise,
-    fromSafeResultFn: fromSafeAsyncResultFn,
 }

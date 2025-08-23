@@ -1,7 +1,6 @@
 export {
     errAsync,
     fromPromise,
-    fromSafeAsyncResultFn,
     fromSafeValuePromise as fromSafePromise,
     fromSafeResultPromise,
     okAsync,
