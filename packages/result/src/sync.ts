@@ -2,18 +2,7 @@ import { errAsync, ResultAsync } from "./async"
 import { UnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 
-type Ok<TValue> = {
-    success: true
-    value: TValue
-}
-
-type Error<TError> = {
-    success: false
-    error: TError
-}
-
-export type Result<TValue, TError> = (Ok<TValue> | Error<TError>) & {
-    async: false
+type Functions<TValue, TError> = {
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
     bind: <const TBoundValue, const TBoundError>(
@@ -33,7 +22,21 @@ export type Result<TValue, TError> = (Ok<TValue> | Error<TError>) & {
     dangerouslyUnwrapErr: () => TError
 }
 
-export const ok = <const TValue, const TError = never>(value: TValue): Result<TValue, TError> => ({
+export type Ok<TValue> = {
+    async: false
+    success: true
+    value: TValue
+} & Functions<TValue, never>
+
+export type Err<TError> = {
+    async: false
+    success: false
+    error: TError
+} & Functions<never, TError>
+
+export type Result<TValue, TError> = Ok<TValue> | Err<TError>
+
+export const ok = <const TValue>(value: TValue): Ok<TValue> => ({
     async: false,
     success: true,
     value,
@@ -52,7 +55,7 @@ export const ok = <const TValue, const TError = never>(value: TValue): Result<TV
     },
 })
 
-export const err = <const TError, const TValue = never>(error: TError): Result<TValue, TError> => ({
+export const err = <const TError>(error: TError): Err<TError> => ({
     async: false,
     success: false,
     error,
