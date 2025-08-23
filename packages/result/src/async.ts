@@ -19,6 +19,11 @@ export type ResultAsync<TValue, TError> = {
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
+    bindErr: <const TBoundValue, const TBoundError>(
+        binder: (
+            error: TError,
+        ) => Result<TValue | TBoundValue, TBoundError> | ResultAsync<TValue | TBoundValue, TBoundError>,
+    ) => ResultAsync<TValue | TBoundValue, TBoundError>
     effect: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
 }
@@ -36,6 +41,7 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
         const bound = binder(value)
         return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
     },
+    bindErr: () => okAsync(value),
     effect: (effect) => tap(value, effect, okAsync),
     effectErr: () => okAsync(value),
 })
@@ -50,6 +56,10 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
         return mapped instanceof Promise ? fromSafeErrorPromise(mapped) : errAsync(mapped)
     },
     bind: () => errAsync(error),
+    bindErr: (binder) => {
+        const bound = binder(error)
+        return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
+    },
     effect: () => errAsync(error),
     effectErr: (effect) => tap(error, effect, errAsync),
 })
@@ -88,6 +98,31 @@ export const fromPromise = <const TValue, const TError>(
             (error) => (isBoundError(error) ? error.value : errorHandler(error)),
         )
     },
+    bindErr: <const TBoundValue, const TBoundError>(
+        binder: (
+            error: TError,
+        ) => Result<TValue | TBoundValue, TBoundError> | ResultAsync<TValue | TBoundValue, TBoundError>,
+    ) => {
+        const [createBoundError, isBoundError] = brandedError<TBoundError>()
+
+        return fromPromise<TValue | TBoundValue, TBoundError>(
+            promise.catch(async (error: unknown) => {
+                const bound = await binder(await errorHandler(error))
+                if (bound.success) {
+                    return bound.value
+                } else {
+                    throw createBoundError(bound.error, "")
+                }
+            }),
+            (error) => {
+                if (isBoundError(error)) {
+                    return error.value
+                } else {
+                    throw error
+                }
+            },
+        )
+    },
     effect: (effect) =>
         fromPromise(
             promise.then((value) => tap(value, effect, identity)),
@@ -96,7 +131,7 @@ export const fromPromise = <const TValue, const TError>(
     effectErr: (effect) => fromPromise(promise, async (error) => tap(await errorHandler(error), effect, identity)),
 })
 
-export const fromSafeValuePromise = <const TValue, const TError>(
+export const fromSafeValuePromise = <const TValue, const TError = never>(
     valuePromise: Promise<TValue>,
 ): ResultAsync<TValue, TError> =>
     fromPromise(valuePromise, (error) => {
@@ -105,16 +140,13 @@ export const fromSafeValuePromise = <const TValue, const TError>(
 
 const fromSafeErrorPromise = <const TError, const TValue = never>(
     errorPromise: Promise<TError>,
-): ResultAsync<TValue, TError> => ({
-    async: true,
-    then: (onFulfilled, onRejected) => errorPromise.then((error) => err(error)).then(onFulfilled, onRejected),
-    unwrapOr: (or) => Promise.resolve(or),
-    map: () => fromSafeErrorPromise(errorPromise),
-    mapErr: (mapper) => fromSafeErrorPromise(errorPromise.then(async (error) => await mapper(error))),
-    bind: () => fromSafeErrorPromise(errorPromise),
-    effect: () => fromSafeErrorPromise(errorPromise),
-    effectErr: (effect) => fromSafeErrorPromise(errorPromise.then((error) => tap(error, effect, identity))),
-})
+): ResultAsync<TValue, TError> =>
+    fromPromise(
+        new Promise((_, reject) => {
+            reject(new Error())
+        }),
+        () => errorPromise,
+    )
 
 export const fromSafeResultPromise = <const TValue, const TError>(
     resultPromise: Promise<Result<TValue, TError>> | (() => Promise<Result<TValue, TError>>),

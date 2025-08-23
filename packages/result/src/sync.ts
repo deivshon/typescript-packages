@@ -17,8 +17,11 @@ export type Result<TValue, TError> = (Ok<TValue> | Error<TError>) & {
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
     bind: <const TBoundValue, const TBoundError>(
-        binder: (value: TValue) => Result<TBoundValue, TBoundError>,
+        binder: (value: TValue) => Result<TBoundValue, TError | TBoundError>,
     ) => Result<TBoundValue, TError | TBoundError>
+    bindErr: <const TBoundValue, const TBoundError>(
+        binder: (error: TError) => Result<TValue | TBoundValue, TBoundError>,
+    ) => Result<TValue | TBoundValue, TBoundError>
     asyncBind: <const TBoundValue, const TBoundError>(
         asyncBinder: (value: TValue) => ResultAsync<TBoundValue, TError | TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
@@ -34,6 +37,7 @@ export const ok = <const TValue, const TError = never>(value: TValue): Result<TV
     mapErr: () => ok(value),
     unwrapOr: () => value,
     bind: (binder) => binder(value),
+    bindErr: () => ok(value),
     asyncBind: (asyncBinder) => asyncBinder(value),
     effect: (effect) => tap(value, effect, ok),
     effectErr: () => ok(value),
@@ -47,6 +51,7 @@ export const err = <const TError, const TValue = never>(error: TError): Result<T
     map: () => err(error),
     mapErr: (mapper) => err(mapper(error)),
     bind: () => err(error),
+    bindErr: (binder) => binder(error),
     asyncBind: () => errAsync(error),
     effect: () => err(error),
     effectErr: (effect) => tap(error, effect, err),
