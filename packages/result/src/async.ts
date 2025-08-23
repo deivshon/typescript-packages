@@ -1,7 +1,7 @@
-import { UnwrapError } from "./errors"
+import { rejectWithErrorUnwrapError, rejectWithValueUnwrapError, throwValueUnwrapError, UnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { anonymousError, identity } from "./internal/values"
-import { Result, err, ok } from "./sync"
+import { err, ok, Result } from "./sync"
 
 export type ResultAsync<TValue, TError> = {
     async: true
@@ -31,47 +31,57 @@ export type ResultAsync<TValue, TError> = {
     dangerouslyUnwrapErr: () => Promise<TError>
 }
 
-export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> => ({
-    async: true,
-    then: (onFulfilled, onRejected) => Promise.resolve(ok(value)).then(onFulfilled, onRejected),
-    map: (mapper) => {
-        const mapped = mapper(value)
-        return mapped instanceof Promise ? fromSafeValuePromise(mapped) : okAsync(mapped)
-    },
-    mapErr: () => okAsync(value),
-    bind: (binder) => {
-        const bound = binder(value)
-        return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
-    },
-    bindErr: () => okAsync(value),
-    effect: (effect) => tap(value, effect, okAsync),
-    effectErr: () => okAsync(value),
-    unwrapOr: () => Promise.resolve(value),
-    unwrapErrOr: (or) => Promise.resolve(or),
-    dangerouslyUnwrap: () => Promise.resolve(value),
-    dangerouslyUnwrapErr: () => Promise.reject(new UnwrapError("error")),
-})
+export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> => {
+    const self = () => okAsync(value)
+    const extract = () => Promise.resolve(value)
 
-export const errAsync = <const TError, const TValue = never>(error: TError): ResultAsync<TValue, TError> => ({
-    async: true,
-    then: (onFulfilled, onRejected) => Promise.resolve(err(error)).then(onFulfilled, onRejected),
-    map: () => errAsync(error),
-    mapErr: (mapper) => {
-        const mapped = mapper(error)
-        return mapped instanceof Promise ? fromSafeErrorPromise(mapped) : errAsync(mapped)
-    },
-    bind: () => errAsync(error),
-    bindErr: (binder) => {
-        const bound = binder(error)
-        return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
-    },
-    effect: () => errAsync(error),
-    effectErr: (effect) => tap(error, effect, errAsync),
-    unwrapOr: (or) => Promise.resolve(or),
-    unwrapErrOr: () => Promise.resolve(error),
-    dangerouslyUnwrap: () => Promise.reject(new UnwrapError("value")),
-    dangerouslyUnwrapErr: () => Promise.resolve(error),
-})
+    return {
+        async: true,
+        then: (onFulfilled, onRejected) => Promise.resolve(ok(value)).then(onFulfilled, onRejected),
+        map: (mapper) => {
+            const mapped = mapper(value)
+            return mapped instanceof Promise ? fromSafeValuePromise(mapped) : okAsync(mapped)
+        },
+        mapErr: self,
+        bind: (binder) => {
+            const bound = binder(value)
+            return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
+        },
+        bindErr: self,
+        effect: (effect) => tap(value, effect, okAsync),
+        effectErr: self,
+        unwrapOr: extract,
+        unwrapErrOr: (or) => Promise.resolve(or),
+        dangerouslyUnwrap: extract,
+        dangerouslyUnwrapErr: rejectWithErrorUnwrapError,
+    }
+}
+
+export const errAsync = <const TError, const TValue = never>(error: TError): ResultAsync<TValue, TError> => {
+    const self = () => errAsync(error)
+    const extract = () => Promise.resolve(error)
+
+    return {
+        async: true,
+        then: (onFulfilled, onRejected) => Promise.resolve(err(error)).then(onFulfilled, onRejected),
+        map: self,
+        mapErr: (mapper) => {
+            const mapped = mapper(error)
+            return mapped instanceof Promise ? fromSafeErrorPromise(mapped) : errAsync(mapped)
+        },
+        bind: self,
+        bindErr: (binder) => {
+            const bound = binder(error)
+            return bound.async ? bound : bound.success ? okAsync(bound.value) : errAsync(bound.error)
+        },
+        effect: self,
+        effectErr: (effect) => tap(error, effect, errAsync),
+        unwrapOr: (or) => Promise.resolve(or),
+        unwrapErrOr: extract,
+        dangerouslyUnwrap: rejectWithValueUnwrapError,
+        dangerouslyUnwrapErr: extract,
+    }
+}
 
 export const fromPromise = <const TValue, const TError>(
     promise: Promise<TValue>,
@@ -80,7 +90,7 @@ export const fromPromise = <const TValue, const TError>(
     async: true,
     then: (onFulfilled, onRejected) =>
         promise
-            .then((value) => ok(value))
+            .then(ok)
             .catch(async (error: unknown) => err(await errorHandler(error)))
             .then(onFulfilled, onRejected),
     map: (mapper) =>
@@ -137,12 +147,9 @@ export const fromPromise = <const TValue, const TError>(
             errorHandler,
         ),
     effectErr: (effect) => fromPromise(promise, async (error) => tap(await errorHandler(error), effect, identity)),
-    unwrapOr: (or) => promise.then((value) => value).catch(() => or),
+    unwrapOr: (or) => promise.catch(() => or),
     unwrapErrOr: (or) => promise.then(() => or).catch(errorHandler),
-    dangerouslyUnwrap: () =>
-        promise.catch(() => {
-            throw new UnwrapError("value")
-        }),
+    dangerouslyUnwrap: () => promise.catch(throwValueUnwrapError),
     dangerouslyUnwrapErr: async () => {
         const [createThenError, isThenError] = anonymousError<UnwrapError>()
 
@@ -168,13 +175,7 @@ export const fromSafeValuePromise = <const TValue, const TError = never>(
 
 const fromSafeErrorPromise = <const TError, const TValue = never>(
     errorPromise: Promise<TError>,
-): ResultAsync<TValue, TError> =>
-    fromPromise(
-        new Promise((_, reject) => {
-            reject(new Error())
-        }),
-        () => errorPromise,
-    )
+): ResultAsync<TValue, TError> => fromPromise(Promise.reject(new Error()), () => errorPromise)
 
 export const fromSafeResultPromise = <const TValue, const TError>(
     resultPromise: Promise<Result<TValue, TError>> | (() => Promise<Result<TValue, TError>>),

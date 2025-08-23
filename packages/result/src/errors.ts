@@ -1,4 +1,4 @@
-type UnwrapErrorKind = "value" | "error"
+export type UnwrapErrorKind = "value" | "error"
 
 export class UnwrapError extends Error {
     kind: UnwrapErrorKind
@@ -9,3 +9,13 @@ export class UnwrapError extends Error {
         this.kind = kind
     }
 }
+
+export const throwValueUnwrapError = () => {
+    throw new UnwrapError("value")
+}
+export const throwErrorUnwrapError = () => {
+    throw new UnwrapError("error")
+}
+
+export const rejectWithValueUnwrapError = () => Promise.reject(new UnwrapError("value"))
+export const rejectWithErrorUnwrapError = () => Promise.reject(new UnwrapError("error"))
