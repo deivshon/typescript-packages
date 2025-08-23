@@ -8,6 +8,7 @@ export type Package = {
     name: string
     path: string
     workspaceDependencies: string[]
+    isBuildPackage: boolean
 }
 
 export const computePackages = (): Package[] => {
@@ -67,6 +68,7 @@ export const computePackages = (): Package[] => {
                     ...Object.entries(packageJson.devDependencies).map(workspaceOnlyPackageName),
                 ].filter((dependency) => typeof dependency === "string"),
             ),
+            isBuildPackage: packageJson.name.startsWith("@build/"),
         })
     }
 

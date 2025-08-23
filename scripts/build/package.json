@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "es-toolkit": "^1.39.9",
+        "esbuild": "^0.25.9",
         "zod": "^4.0.14"
     },
     "devDependencies": {

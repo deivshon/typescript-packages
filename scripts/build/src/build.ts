@@ -1,10 +1,20 @@
 import { spawn } from "child_process"
-import { computePackages } from "./packages.ts"
+import { sortBy } from "es-toolkit"
+import * as esbuild from "esbuild"
+import { readFile, stat, writeFile } from "fs/promises"
+import path from "path"
+import { promisify } from "util"
+import * as zlib from "zlib"
+import { computePackages, type Package } from "./packages.ts"
 
 const main = async () => {
     const packages = computePackages()
 
     const leftToBuild = new Set(packages.map((pkg) => pkg.name))
+    const built = new Set<Package>()
+
+    const sizes = new Map<Package, { esm: PackageSize; cjs: PackageSize }>()
+
     while (leftToBuild.size > 0) {
         const buildable = packages.filter(
             (pkg) =>
@@ -33,8 +43,81 @@ const main = async () => {
 
         for (const pkg of buildable) {
             leftToBuild.delete(pkg.name)
+            built.add(pkg)
         }
     }
+
+    await Promise.all(
+        Array.from(built).map(async (pkg) => {
+            const dist = path.join(pkg.path, "dist")
+
+            const baseEsm = path.join(dist, "index.js")
+            const baseCjs = path.join(dist, "index.cjs")
+            const minifiedEsm = path.join(dist, "index.min.js")
+            const minifiedCjs = path.join(dist, "index.min.cjs")
+            const gzippedEsm = path.join(dist, "index.min.js.gz")
+            const gzippedCjs = path.join(dist, "index.min.cjs.gz")
+
+            const baseEsmCode = await readFile(baseEsm)
+            const baseCjsCode = await readFile(baseCjs)
+            const { code: minifiedEsmCode } = await esbuild.transform(baseEsmCode, { minify: true })
+            const { code: minifiedCjsCode } = await esbuild.transform(baseCjsCode, { minify: true })
+            const gzippedEsmCode = await gzip(minifiedEsmCode)
+            const gzippedCjsCode = await gzip(minifiedCjsCode)
+
+            await writeFile(minifiedEsm, minifiedEsmCode)
+            await writeFile(minifiedCjs, minifiedCjsCode)
+            await writeFile(gzippedEsm, gzippedEsmCode)
+            await writeFile(gzippedCjs, gzippedCjsCode)
+
+            const { size: minifiedEsmSize } = await stat(minifiedEsm)
+            const { size: minifiedCjsSize } = await stat(minifiedCjs)
+            const { size: gzippedEsmSize } = await stat(gzippedEsm)
+            const { size: gzippedCjsSize } = await stat(gzippedCjs)
+
+            sizes.set(pkg, {
+                cjs: {
+                    minified: minifiedCjsSize,
+                    gzipped: gzippedCjsSize,
+                },
+                esm: {
+                    minified: minifiedEsmSize,
+                    gzipped: gzippedEsmSize,
+                },
+            })
+        }),
+    )
+
+    console.log("\n")
+    for (const [pkg, size] of sortBy(Array.from(sizes.entries()), [(value) => value[0].name])) {
+        if (pkg.isBuildPackage) {
+            continue
+        }
+
+        console.log(
+            `esm: ${formatBytes(size.esm.minified).padEnd(7, " ")}\tesm/gz: ${formatBytes(size.esm.gzipped).padEnd(7, " ")}\tcjs: ${formatBytes(size.cjs.minified).padEnd(7, " ")}\tcjs/gz: ${formatBytes(size.cjs.gzipped).padEnd(7, " ")} <- ${colored(`[${pkg.name}]`)}`,
+        )
+    }
+}
+
+const gzip = promisify(zlib.gzip)
+
+type PackageSize = {
+    minified: number
+    gzipped: number
+}
+
+const formatBytes = (bytes: number): string => {
+    let number = bytes
+    let count = 0
+
+    const prefixes = ["B", "KiB", "MiB", "GiB"]
+    while (number > 1024 || count >= prefixes.length - 1) {
+        number /= 1024
+        count++
+    }
+
+    return `${count === 0 ? number : number.toFixed(2)}${prefixes.at(count)}`
 }
 
 const colored = (() => {
