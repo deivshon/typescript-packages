@@ -57,7 +57,7 @@ export const err = <const TError, const TValue = never>(error: TError): Result<T
     effectErr: (effect) => tap(error, effect, err),
 })
 
-export const trySync = <TReturn>(fn: () => TReturn): Result<TReturn, unknown> => {
+export const trySync = <const TReturn>(fn: () => TReturn): Result<TReturn, unknown> => {
     try {
         return ok(fn())
     } catch (error) {
@@ -66,7 +66,7 @@ export const trySync = <TReturn>(fn: () => TReturn): Result<TReturn, unknown> =>
 }
 
 export const safeguardSync =
-    <TArgs extends readonly unknown[], TReturn>(fn: (...args: TArgs) => TReturn) =>
+    <TArgs extends readonly unknown[], const TReturn>(fn: (...args: TArgs) => TReturn) =>
     (...args: TArgs): Result<TReturn, unknown> =>
         trySync(() => fn(...args))
 
