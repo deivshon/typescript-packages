@@ -1,6 +1,5 @@
-import { brandedError } from "./internal/branded-error"
 import { tap } from "./internal/effects"
-import { identity } from "./internal/values"
+import { anonymousError, identity } from "./internal/values"
 import { Result, err, ok } from "./sync"
 
 export type ResultAsync<TValue, TError> = {
@@ -84,7 +83,7 @@ export const fromPromise = <const TValue, const TError>(
     bind: <const TBoundValue, const TBoundError>(
         binder: (value: TValue) => Result<TBoundValue, TBoundError> | ResultAsync<TBoundValue, TBoundError>,
     ) => {
-        const [createBoundError, isBoundError] = brandedError<TBoundError>()
+        const [createBoundError, isBoundError] = anonymousError<TBoundError>()
 
         return fromPromise<TBoundValue, TError | TBoundError>(
             promise.then(async (value) => {
@@ -92,7 +91,7 @@ export const fromPromise = <const TValue, const TError>(
                 if (bound.success) {
                     return bound.value
                 } else {
-                    throw createBoundError(bound.error, "")
+                    throw createBoundError(bound.error)
                 }
             }),
             (error) => (isBoundError(error) ? error.value : errorHandler(error)),
@@ -103,7 +102,7 @@ export const fromPromise = <const TValue, const TError>(
             error: TError,
         ) => Result<TValue | TBoundValue, TBoundError> | ResultAsync<TValue | TBoundValue, TBoundError>,
     ) => {
-        const [createBoundError, isBoundError] = brandedError<TBoundError>()
+        const [createBoundError, isBoundError] = anonymousError<TBoundError>()
 
         return fromPromise<TValue | TBoundValue, TBoundError>(
             promise.catch(async (error: unknown) => {
@@ -111,7 +110,7 @@ export const fromPromise = <const TValue, const TError>(
                 if (bound.success) {
                     return bound.value
                 } else {
-                    throw createBoundError(bound.error, "")
+                    throw createBoundError(bound.error)
                 }
             }),
             (error) => {
@@ -151,14 +150,14 @@ const fromSafeErrorPromise = <const TError, const TValue = never>(
 export const fromSafeResultPromise = <const TValue, const TError>(
     resultPromise: Promise<Result<TValue, TError>> | (() => Promise<Result<TValue, TError>>),
 ): ResultAsync<TValue, TError> => {
-    const [createResultError, isResultError] = brandedError<TError>()
+    const [createResultError, isResultError] = anonymousError<TError>()
 
     return fromPromise(
         (resultPromise instanceof Function ? resultPromise() : resultPromise).then((result) => {
             if (result.success) {
                 return result.value
             } else {
-                throw createResultError(result.error, "")
+                throw createResultError(result.error)
             }
         }),
         (error) => {
