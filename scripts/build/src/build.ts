@@ -49,6 +49,10 @@ const main = async () => {
 
     await Promise.all(
         Array.from(built).map(async (pkg) => {
+            if (pkg.isBuildPackage) {
+                return
+            }
+
             const dist = path.join(pkg.path, "dist")
 
             const baseEsm = path.join(dist, "index.js")
@@ -90,10 +94,6 @@ const main = async () => {
 
     console.log("\n")
     for (const [pkg, size] of sortBy(Array.from(sizes.entries()), [(value) => value[0].name])) {
-        if (pkg.isBuildPackage) {
-            continue
-        }
-
         console.log(
             `esm: ${formatBytes(size.esm.minified).padEnd(7, " ")}\tesm/gz: ${formatBytes(size.esm.gzipped).padEnd(7, " ")}\tcjs: ${formatBytes(size.cjs.minified).padEnd(7, " ")}\tcjs/gz: ${formatBytes(size.cjs.gzipped).padEnd(7, " ")} <- ${colored(`[${pkg.name}]`)}`,
         )
