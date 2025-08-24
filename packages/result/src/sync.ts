@@ -1,9 +1,10 @@
-import { errAsync, fromSafePromise, ResultAsync } from "./async"
+import { asyncFn, errAsync, fromSafePromise, ResultAsync } from "./async"
 import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { identity } from "./internal/values"
 
 type Functions<TValue, TError> = {
+    collapse: () => Result<TValue, TError>
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
     asyncMap: <const TMappedValue>(
@@ -16,7 +17,9 @@ type Functions<TValue, TError> = {
         binder: (error: TError) => Result<TValue | TBoundValue, TBoundError>,
     ) => Result<TValue | TBoundValue, TBoundError>
     asyncBind: <const TBoundValue, const TBoundError>(
-        asyncBinder: (value: TValue) => ResultAsync<TBoundValue, TError | TBoundError>,
+        asyncBinder: (
+            value: TValue,
+        ) => Promise<Result<TBoundValue, TError | TBoundError>> | ResultAsync<TBoundValue, TError | TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
     effect: (effect: (value: TValue) => unknown) => Result<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
@@ -24,7 +27,7 @@ type Functions<TValue, TError> = {
         effect: (value: TValue) => Result<unknown, TEffectError>,
     ) => Result<TValue, TError | TEffectError>
     asyncThrough: <const TEffectError>(
-        effect: (value: TValue) => ResultAsync<unknown, TEffectError>,
+        effect: (value: TValue) => Promise<Result<unknown, TEffectError>> | ResultAsync<unknown, TEffectError>,
     ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => TValue | TOr
     unwrapErrOr<const TOr>(value: TOr): TError | TOr
@@ -49,18 +52,18 @@ export type Result<TValue, TError> = Ok<TValue> | Err<TError>
 export const ok = <const TValue>(value: TValue): Ok<TValue> => {
     const self = () => ok(value)
     const extract = () => value
-    const apply = <const T>(fn: (value: TValue) => T) => fn(value)
 
     return {
         async: false,
         success: true,
         value,
+        collapse: self,
         map: (mapper) => ok(mapper(value)),
         mapErr: self,
         asyncMap: (mapper) => fromSafePromise(mapper(value)),
-        bind: apply,
+        bind: (binder) => binder(value),
         bindErr: self,
-        asyncBind: apply,
+        asyncBind: (binder) => asyncFn(binder)(value),
         effect: (effect) => tap(value, effect, extract, ok),
         effectErr: self,
         unwrapOr: extract,
@@ -68,7 +71,7 @@ export const ok = <const TValue>(value: TValue): Ok<TValue> => {
         dangerouslyUnwrap: extract,
         dangerouslyUnwrapErr: throwValueUnwrapError,
         through: (effect) => tap(value, effect, (result) => (result.success ? ok(value) : err(result.error)), identity),
-        asyncThrough: (effect) => effect(value).map(extract),
+        asyncThrough: (effect) => asyncFn(effect)(value).map(extract),
     }
 }
 
@@ -81,6 +84,7 @@ export const err = <const TError>(error: TError): Err<TError> => {
         async: false,
         success: false,
         error,
+        collapse: self,
         map: self,
         mapErr: (mapper) => err(mapper(error)),
         asyncMap: asyncSelf,
@@ -98,6 +102,24 @@ export const err = <const TError>(error: TError): Err<TError> => {
     }
 }
 
+export const syncFn =
+    <TArgs extends readonly unknown[], const TValue, const TError>(fn: (...args: TArgs) => Result<TValue, TError>) =>
+    (...args: TArgs) =>
+        fn(...args)
+
+export const safeSyncFn =
+    <TArgs extends readonly unknown[], const TValue, const TError, const THandledError>(
+        fn: (...args: TArgs) => Result<TValue, TError>,
+        errorHandler: (error: unknown) => THandledError,
+    ) =>
+    (...args: TArgs): Result<TValue, TError | THandledError> => {
+        try {
+            return fn(...args)
+        } catch (error) {
+            return err(errorHandler(error))
+        }
+    }
+
 export const trySync = <const TReturn>(fn: () => TReturn): Result<TReturn, unknown> => {
     try {
         return ok(fn())
@@ -106,7 +128,7 @@ export const trySync = <const TReturn>(fn: () => TReturn): Result<TReturn, unkno
     }
 }
 
-export const safeguardSync =
+export const syncSafeguard =
     <TArgs extends readonly unknown[], const TReturn>(fn: (...args: TArgs) => TReturn) =>
     (...args: TArgs): Result<TReturn, unknown> =>
         trySync(() => fn(...args))
@@ -114,6 +136,8 @@ export const safeguardSync =
 export const Result = {
     ok,
     err,
+    fn: syncFn,
+    safeFn: safeSyncFn,
     try: trySync,
-    safeguard: safeguardSync,
+    safeguard: syncSafeguard,
 }

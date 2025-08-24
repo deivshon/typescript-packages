@@ -1,12 +1,14 @@
 export {
+    asyncFn,
+    asyncSafeguard,
     errAsync,
     fromPromise,
     fromSafePromise,
-    fromSafeResultPromise,
+    fromSyncResult,
     okAsync,
     ResultAsync,
-    safeguardAsync,
+    safeAsyncFn,
     tryAsync,
 } from "./async"
 export { UnwrapError } from "./errors"
-export { err, ok, Result, safeguardSync, trySync } from "./sync"
+export { err, ok, Result, safeSyncFn, syncFn, syncSafeguard, trySync } from "./sync"
