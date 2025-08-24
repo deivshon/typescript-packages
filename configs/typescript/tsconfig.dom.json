@@ -1,0 +1,6 @@
+{
+    "extends": "./tsconfig.neutral.json",
+    "compilerOptions": {
+        "lib": ["dom", "dom.iterable", "esnext"]
+    }
+}
