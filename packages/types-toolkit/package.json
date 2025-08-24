@@ -8,15 +8,18 @@
         "dev": "tsdown --watch",
         "typecheck": "tsc --noEmit",
         "typecheck:watch": "tsc --noEmit --watch",
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "attw": "attw -qP ."
     },
-    "types": "./dist/index.d.ts",
+    "module": "./dist/index.js",
+    "main": "./dist/index.cjs",
     "files": [
         "dist"
     ],
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts"
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
         }
     },
     "devDependencies": {

@@ -7,13 +7,15 @@
         "typecheck:packages": "pnpm -r --parallel --filter \"./packages/*\" typecheck",
         "typecheck:packages:watch": "pnpm -r --parallel --filter \"./packages/*\" typecheck:watch",
         "lint": "pnpm -r --parallel lint",
+        "attw:packages": "pnpm -r --parallel --filter \"./packages/*\" attw",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "checklist": "pnpm build:packages && pnpm typecheck && pnpm lint && pnpm format:check",
+        "checklist": "pnpm build:packages && pnpm typecheck && pnpm lint && pnpm attw:packages && pnpm format:check",
         "clean": "rm -rf ./packages/*/dist ./scripts/*/dist ./configs/*/dist ./test/*/dist ./test/*/.next",
         "purge": "pnpm clean && rm -rf node_modules ./packages/*/node_modules ./scripts/*/node_modules ./configs/*/node_modules ./test/*/node_modules"
     },
     "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
         "@eslint/js": "^9.30.1",
         "eslint": "^9.30.1",
         "eslint-plugin-react": "^7.37.5",

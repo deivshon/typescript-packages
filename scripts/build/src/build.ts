@@ -1,7 +1,7 @@
 import { spawn } from "child_process"
 import { sortBy } from "es-toolkit"
 import * as esbuild from "esbuild"
-import { readFile, stat, writeFile } from "fs/promises"
+import { readFile, stat, unlink, writeFile } from "fs/promises"
 import path from "path"
 import { promisify } from "util"
 import * as zlib from "zlib"
@@ -89,6 +89,11 @@ const main = async () => {
                     gzipped: gzippedEsmSize,
                 },
             })
+
+            await unlink(minifiedEsm)
+            await unlink(minifiedCjs)
+            await unlink(gzippedEsm)
+            await unlink(gzippedCjs)
         }),
     )
 
