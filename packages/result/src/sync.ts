@@ -3,8 +3,17 @@ import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { identity } from "./internal/values"
 
-type Functions<TValue, TError> = {
-    collapse: () => Result<TValue, TError>
+type $Ok<TValue> = {
+    async: false
+    success: true
+    value: TValue
+}
+type $Err<TError> = {
+    async: false
+    success: false
+    error: TError
+}
+type $Functions<TValue, TError> = {
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
     asyncMap: <const TMappedValue>(
@@ -34,22 +43,9 @@ type Functions<TValue, TError> = {
     dangerouslyUnwrap: () => TValue
     dangerouslyUnwrapErr: () => TError
 }
+export type Result<TValue, TError> = ($Ok<TValue> | $Err<TError>) & $Functions<TValue, TError>
 
-export type Ok<TValue> = {
-    async: false
-    success: true
-    value: TValue
-} & Functions<TValue, never>
-
-export type Err<TError> = {
-    async: false
-    success: false
-    error: TError
-} & Functions<never, TError>
-
-export type Result<TValue, TError> = Ok<TValue> | Err<TError>
-
-export const ok = <const TValue>(value: TValue): Ok<TValue> => {
+export const ok = <const TValue>(value: TValue): $Ok<TValue> & $Functions<TValue, never> => {
     const self = () => ok(value)
     const extract = () => value
 
@@ -57,7 +53,6 @@ export const ok = <const TValue>(value: TValue): Ok<TValue> => {
         async: false,
         success: true,
         value,
-        collapse: self,
         map: (mapper) => ok(mapper(value)),
         mapErr: self,
         asyncMap: (mapper) => fromSafePromise(mapper(value)),
@@ -75,7 +70,7 @@ export const ok = <const TValue>(value: TValue): Ok<TValue> => {
     }
 }
 
-export const err = <const TError>(error: TError): Err<TError> => {
+export const err = <const TError>(error: TError): $Err<TError> & $Functions<never, TError> => {
     const self = () => err(error)
     const asyncSelf = () => errAsync(error)
     const extract = () => error
@@ -84,7 +79,6 @@ export const err = <const TError>(error: TError): Err<TError> => {
         async: false,
         success: false,
         error,
-        collapse: self,
         map: self,
         mapErr: (mapper) => err(mapper(error)),
         asyncMap: asyncSelf,

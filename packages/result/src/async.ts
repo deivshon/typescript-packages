@@ -9,7 +9,6 @@ export type ResultAsync<TValue, TError> = {
         onFulfilled?: (value: Result<TValue, TError>) => TFulfilled | PromiseLike<TFulfilled>,
         onRejected?: (error: unknown) => TRejected | PromiseLike<TRejected>,
     ) => Promise<TFulfilled | TRejected>
-    collapse: () => ResultAsync<TValue, TError>
     map: <const TMappedValue>(
         mapper: (value: TValue) => TMappedValue | Promise<TMappedValue>,
     ) => ResultAsync<TMappedValue, TError>
@@ -54,7 +53,6 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
 
     return {
         async: true,
-        collapse: self,
         then: (onFulfilled, onRejected) => Promise.resolve(ok(value)).then(onFulfilled, onRejected),
         map: (mapper) => {
             const mapped = mapper(value)
@@ -79,7 +77,6 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
 
     return {
         async: true,
-        collapse: self,
         then: (onFulfilled, onRejected) => Promise.resolve(err(error)).then(onFulfilled, onRejected),
         map: self,
         mapErr: (mapper) => {
@@ -108,7 +105,6 @@ export const fromPromise = <const TValue, const TError>(
             .then(ok)
             .catch(async (error: unknown) => err(await errorHandler(error)))
             .then(onFulfilled, onRejected),
-    collapse: () => fromPromise(promise, errorHandler),
     map: (mapper) =>
         fromPromise(
             promise.then(async (value) => await mapper(value)),
