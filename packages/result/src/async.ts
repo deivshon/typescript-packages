@@ -27,9 +27,9 @@ export type ResultAsync<TValue, TError> = {
         binder: (
             error: TError,
         ) =>
-            | Result<TValue | TBoundValue, TBoundError>
-            | Promise<Result<TValue | TBoundValue, TBoundError>>
-            | ResultAsync<TValue | TBoundValue, TBoundError>,
+            | Result<TBoundValue, TBoundError>
+            | Promise<Result<TBoundValue, TBoundError>>
+            | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TValue | TBoundValue, TBoundError>
     effect: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
@@ -137,9 +137,9 @@ export const fromPromise = <const TValue, const TError>(
         binder: (
             error: TError,
         ) =>
-            | Result<TValue | TBoundValue, TBoundError>
-            | Promise<Result<TValue | TBoundValue, TBoundError>>
-            | ResultAsync<TValue | TBoundValue, TBoundError>,
+            | Result<TBoundValue, TBoundError>
+            | Promise<Result<TBoundValue, TBoundError>>
+            | ResultAsync<TBoundValue, TBoundError>,
     ) => {
         const [createBoundError, isBoundError] = anonymousError<TBoundError>()
 
@@ -303,6 +303,8 @@ export const asyncSafeguard =
     (...args: TArgs): ResultAsync<TReturn, unknown> =>
         tryAsync(() => fn(...args))
 
+export const collapseAsync = <const TValue, const TError>(result: ResultAsync<TValue, TError>) => result
+
 export const ResultAsync = {
     ok: okAsync,
     err: errAsync,
@@ -313,4 +315,5 @@ export const ResultAsync = {
     fromPromise,
     fromSafePromise,
     fromSync: fromSyncResult,
+    collapse: collapseAsync,
 }

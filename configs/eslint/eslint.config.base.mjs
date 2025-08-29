@@ -36,8 +36,8 @@ export const baseEsLintConfig = tseslint.config(
             "@typescript-eslint/no-unnecessary-type-parameters": "off",
             "@typescript-eslint/no-unnecessary-condition": "off",
             "@typescript-eslint/prefer-optional-chain": "off",
+            "@typescript-eslint/consistent-type-definitions": "off",
             "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-            "@typescript-eslint/consistent-type-definitions": ["error", "type"],
             "@typescript-eslint/array-type": ["error", { default: "array-simple" }],
             "@typescript-eslint/prefer-nullish-coalescing": [
                 "error",

@@ -3,32 +3,23 @@ import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { identity } from "./internal/values"
 
-type $Ok<TValue> = {
+export interface $SyncCore<TValue, TError> {
     async: false
-    success: true
-    value: TValue
-}
-type $Err<TError> = {
-    async: false
-    success: false
-    error: TError
-}
-type $Functions<TValue, TError> = {
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
     asyncMap: <const TMappedValue>(
         mapper: (value: TValue) => Promise<TMappedValue>,
     ) => ResultAsync<TMappedValue, TError>
     bind: <const TBoundValue, const TBoundError>(
-        binder: (value: TValue) => Result<TBoundValue, TError | TBoundError>,
+        binder: (value: TValue) => Result<TBoundValue, TBoundError>,
     ) => Result<TBoundValue, TError | TBoundError>
     bindErr: <const TBoundValue, const TBoundError>(
-        binder: (error: TError) => Result<TValue | TBoundValue, TBoundError>,
+        binder: (error: TError) => Result<TBoundValue, TBoundError>,
     ) => Result<TValue | TBoundValue, TBoundError>
     asyncBind: <const TBoundValue, const TBoundError>(
         asyncBinder: (
             value: TValue,
-        ) => Promise<Result<TBoundValue, TError | TBoundError>> | ResultAsync<TBoundValue, TError | TBoundError>,
+        ) => Promise<Result<TBoundValue, TBoundError>> | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
     effect: (effect: (value: TValue) => unknown) => Result<TValue, TError>
     effectErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
@@ -43,9 +34,20 @@ type $Functions<TValue, TError> = {
     dangerouslyUnwrap: () => TValue
     dangerouslyUnwrapErr: () => TError
 }
-export type Result<TValue, TError> = ($Ok<TValue> | $Err<TError>) & $Functions<TValue, TError>
 
-export const ok = <const TValue>(value: TValue): $Ok<TValue> & $Functions<TValue, never> => {
+export interface Ok<TValue, TError> extends $SyncCore<TValue, TError> {
+    success: true
+    value: TValue
+}
+
+export interface Err<TValue, TError> extends $SyncCore<TValue, TError> {
+    success: false
+    error: TError
+}
+
+export type Result<TValue, TError> = Ok<TValue, TError> | Err<TValue, TError>
+
+export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
     const self = () => ok(value)
     const extract = () => value
 
@@ -70,7 +72,7 @@ export const ok = <const TValue>(value: TValue): $Ok<TValue> & $Functions<TValue
     }
 }
 
-export const err = <const TError>(error: TError): $Err<TError> & $Functions<never, TError> => {
+export const err = <const TError>(error: TError): Err<never, TError> => {
     const self = () => err(error)
     const asyncSelf = () => errAsync(error)
     const extract = () => error
@@ -127,6 +129,9 @@ export const syncSafeguard =
     (...args: TArgs): Result<TReturn, unknown> =>
         trySync(() => fn(...args))
 
+export const collapseSync = <const TValue, const TError>(result: Result<TValue, TError>): Result<TValue, TError> =>
+    result
+
 export const Result = {
     ok,
     err,
@@ -134,4 +139,5 @@ export const Result = {
     safeFn: safeSyncFn,
     try: trySync,
     safeguard: syncSafeguard,
+    collapse: collapseSync,
 }
