@@ -3,7 +3,7 @@ import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { tap } from "./internal/effects"
 import { identity } from "./internal/values"
 
-export interface $SyncCore<TValue, TError> {
+export interface $Result<TValue, TError> {
     async: false
     map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
     mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
@@ -21,8 +21,8 @@ export interface $SyncCore<TValue, TError> {
             value: TValue,
         ) => Promise<Result<TBoundValue, TBoundError>> | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TBoundValue, TError | TBoundError>
-    effect: (effect: (value: TValue) => unknown) => Result<TValue, TError>
-    effectErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
+    tap: (effect: (value: TValue) => unknown) => Result<TValue, TError>
+    tapErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
     through: <const TEffectError>(
         effect: (value: TValue) => Result<unknown, TEffectError>,
     ) => Result<TValue, TError | TEffectError>
@@ -31,17 +31,16 @@ export interface $SyncCore<TValue, TError> {
     ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => TValue | TOr
     unwrapOrFrom: <const TOr>(from: (error: TError) => TOr) => TValue | TOr
-    unwrapErrOr<const TOr>(value: TOr): TError | TOr
     dangerouslyUnwrap: () => TValue
     dangerouslyUnwrapErr: () => TError
 }
 
-export interface Ok<TValue, TError> extends $SyncCore<TValue, TError> {
+export interface Ok<TValue, TError> extends $Result<TValue, TError> {
     success: true
     value: TValue
 }
 
-export interface Err<TValue, TError> extends $SyncCore<TValue, TError> {
+export interface Err<TValue, TError> extends $Result<TValue, TError> {
     success: false
     error: TError
 }
@@ -62,15 +61,14 @@ export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
         bind: (binder) => binder(value),
         bindErr: self,
         asyncBind: (binder) => asyncFn(binder)(value),
-        effect: (effect) => tap(value, effect, extract, ok),
-        effectErr: self,
-        unwrapOr: extract,
-        unwrapErrOr: identity,
-        dangerouslyUnwrap: extract,
-        dangerouslyUnwrapErr: throwValueUnwrapError,
+        tap: (effect) => tap(value, effect, extract, ok),
+        tapErr: self,
         through: (effect) => tap(value, effect, (result) => (result.success ? ok(value) : err(result.error)), identity),
         asyncThrough: (effect) => asyncFn(effect)(value).map(extract),
+        unwrapOr: extract,
         unwrapOrFrom: extract,
+        dangerouslyUnwrap: extract,
+        dangerouslyUnwrapErr: throwValueUnwrapError,
     }
 }
 
@@ -90,15 +88,14 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
         bind: self,
         bindErr: apply,
         asyncBind: asyncSelf,
-        effect: self,
-        effectErr: (effect) => tap(error, effect, extract, err),
-        unwrapOr: identity,
-        unwrapErrOr: extract,
-        dangerouslyUnwrap: throwErrorUnwrapError,
-        dangerouslyUnwrapErr: extract,
+        tap: self,
+        tapErr: (effect) => tap(error, effect, extract, err),
         through: self,
         asyncThrough: asyncSelf,
+        unwrapOr: identity,
         unwrapOrFrom: apply,
+        dangerouslyUnwrap: throwErrorUnwrapError,
+        dangerouslyUnwrapErr: extract,
     }
 }
 
@@ -120,7 +117,7 @@ export const safeSyncFn =
         }
     }
 
-export const trySync = <const TReturn>(fn: () => TReturn): Result<TReturn, unknown> => {
+export const trySync = <const TValue>(fn: () => TValue): Result<TValue, unknown> => {
     try {
         return ok(fn())
     } catch (error) {
@@ -129,8 +126,8 @@ export const trySync = <const TReturn>(fn: () => TReturn): Result<TReturn, unkno
 }
 
 export const syncSafeguard =
-    <TArgs extends readonly unknown[], const TReturn>(fn: (...args: TArgs) => TReturn) =>
-    (...args: TArgs): Result<TReturn, unknown> =>
+    <TArgs extends readonly unknown[], const TValue>(fn: (...args: TArgs) => TValue) =>
+    (...args: TArgs): Result<TValue, unknown> =>
         trySync(() => fn(...args))
 
 export const collapseSync = <const TValue, const TError>(result: Result<TValue, TError>): Result<TValue, TError> =>

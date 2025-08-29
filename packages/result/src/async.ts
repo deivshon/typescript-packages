@@ -31,8 +31,8 @@ export type ResultAsync<TValue, TError> = {
             | Promise<Result<TBoundValue, TBoundError>>
             | ResultAsync<TBoundValue, TBoundError>,
     ) => ResultAsync<TValue | TBoundValue, TBoundError>
-    effect: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
-    effectErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
+    tap: (effect: (value: TValue) => unknown) => ResultAsync<TValue, TError>
+    tapErr: (effect: (error: TError) => unknown) => ResultAsync<TValue, TError>
     through: <const TEffectError>(
         effect: (
             value: TValue,
@@ -43,7 +43,6 @@ export type ResultAsync<TValue, TError> = {
     ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => Promise<TValue | TOr>
     unwrapOrFrom: <const TOr>(from: (error: TError) => TOr) => Promise<TValue | TOr>
-    unwrapErrOr<const TOr>(value: TOr): Promise<TError | TOr>
     dangerouslyUnwrap: () => Promise<TValue>
     dangerouslyUnwrapErr: () => Promise<TError>
 }
@@ -62,12 +61,11 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
         mapErr: self,
         bind: (binder) => asyncFn(binder)(value),
         bindErr: self,
-        effect: (effect) => tap(value, effect, () => value, okAsync),
-        effectErr: self,
+        tap: (effect) => tap(value, effect, () => value, okAsync),
+        tapErr: self,
         through: (effect) => asyncFn(effect)(value).map(() => value),
         unwrapOr: extract,
         unwrapOrFrom: extract,
-        unwrapErrOr: (or) => Promise.resolve(or),
         dangerouslyUnwrap: extract,
         dangerouslyUnwrapErr: rejectWithErrorUnwrapError,
     }
@@ -87,12 +85,11 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
         },
         bind: self,
         bindErr: (binder) => asyncFn(binder)(error),
-        effect: self,
-        effectErr: (effect) => tap(error, effect, () => error, errAsync),
+        tap: self,
+        tapErr: (effect) => tap(error, effect, () => error, errAsync),
         through: self,
         unwrapOr: (or) => Promise.resolve(or),
         unwrapOrFrom: (from) => Promise.resolve(from(error)),
-        unwrapErrOr: extract,
         dangerouslyUnwrap: rejectWithValueUnwrapError,
         dangerouslyUnwrapErr: extract,
     }
@@ -164,12 +161,12 @@ export const fromPromise = <const TValue, const TError>(
             },
         )
     },
-    effect: (effect) =>
+    tap: (effect) =>
         fromPromise(
             promise.then((value) => tap(value, effect, () => value, identity)),
             errorHandler,
         ),
-    effectErr: (effect) =>
+    tapErr: (effect) =>
         fromPromise(promise, async (error) => {
             const normalized = await errorHandler(error)
             return tap(normalized, effect, () => normalized, identity)
@@ -198,7 +195,6 @@ export const fromPromise = <const TValue, const TError>(
     },
     unwrapOr: (or) => promise.catch(() => or),
     unwrapOrFrom: (from) => promise.catch(from),
-    unwrapErrOr: (or) => promise.then(() => or).catch(errorHandler),
     dangerouslyUnwrap: () => promise.catch(throwValueUnwrapError),
     dangerouslyUnwrapErr: async () => {
         const [createThenError, isThenError] = anonymousError<UnwrapError>()
@@ -300,11 +296,11 @@ export const safeAsyncFn =
         }
     }
 
-export const tryAsync = <const TReturn>(fn: () => Promise<TReturn>) => fromPromise(fn(), identity)
+export const tryAsync = <const TValue>(fn: () => Promise<TValue>) => fromPromise(fn(), identity)
 
 export const asyncSafeguard =
-    <TArgs extends readonly unknown[], const TReturn>(fn: (...args: TArgs) => Promise<TReturn>) =>
-    (...args: TArgs): ResultAsync<TReturn, unknown> =>
+    <TArgs extends readonly unknown[], const TValue>(fn: (...args: TArgs) => Promise<TValue>) =>
+    (...args: TArgs): ResultAsync<TValue, unknown> =>
         tryAsync(() => fn(...args))
 
 export const collapseAsync = <const TValue, const TError>(result: ResultAsync<TValue, TError>) => result
