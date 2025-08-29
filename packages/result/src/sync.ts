@@ -30,6 +30,7 @@ export interface $SyncCore<TValue, TError> {
         effect: (value: TValue) => Promise<Result<unknown, TEffectError>> | ResultAsync<unknown, TEffectError>,
     ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => TValue | TOr
+    unwrapOrFrom: <const TOr>(from: (error: TError) => TOr) => TValue | TOr
     unwrapErrOr<const TOr>(value: TOr): TError | TOr
     dangerouslyUnwrap: () => TValue
     dangerouslyUnwrapErr: () => TError
@@ -69,6 +70,7 @@ export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
         dangerouslyUnwrapErr: throwValueUnwrapError,
         through: (effect) => tap(value, effect, (result) => (result.success ? ok(value) : err(result.error)), identity),
         asyncThrough: (effect) => asyncFn(effect)(value).map(extract),
+        unwrapOrFrom: extract,
     }
 }
 
@@ -76,6 +78,7 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
     const self = () => err(error)
     const asyncSelf = () => errAsync(error)
     const extract = () => error
+    const apply = <const T>(fn: (error: TError) => T): T => fn(error)
 
     return {
         async: false,
@@ -85,7 +88,7 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
         mapErr: (mapper) => err(mapper(error)),
         asyncMap: asyncSelf,
         bind: self,
-        bindErr: (binder) => binder(error),
+        bindErr: apply,
         asyncBind: asyncSelf,
         effect: self,
         effectErr: (effect) => tap(error, effect, extract, err),
@@ -95,6 +98,7 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
         dangerouslyUnwrapErr: extract,
         through: self,
         asyncThrough: asyncSelf,
+        unwrapOrFrom: apply,
     }
 }
 

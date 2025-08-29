@@ -42,6 +42,7 @@ export type ResultAsync<TValue, TError> = {
             | ResultAsync<unknown, TEffectError>,
     ) => ResultAsync<TValue, TError | TEffectError>
     unwrapOr: <const TOr>(value: TOr) => Promise<TValue | TOr>
+    unwrapOrFrom: <const TOr>(from: (error: TError) => TOr) => Promise<TValue | TOr>
     unwrapErrOr<const TOr>(value: TOr): Promise<TError | TOr>
     dangerouslyUnwrap: () => Promise<TValue>
     dangerouslyUnwrapErr: () => Promise<TError>
@@ -65,6 +66,7 @@ export const okAsync = <const TValue, const TError = never>(value: TValue): Resu
         effectErr: self,
         through: (effect) => asyncFn(effect)(value).map(() => value),
         unwrapOr: extract,
+        unwrapOrFrom: extract,
         unwrapErrOr: (or) => Promise.resolve(or),
         dangerouslyUnwrap: extract,
         dangerouslyUnwrapErr: rejectWithErrorUnwrapError,
@@ -89,6 +91,7 @@ export const errAsync = <const TError, const TValue = never>(error: TError): Res
         effectErr: (effect) => tap(error, effect, () => error, errAsync),
         through: self,
         unwrapOr: (or) => Promise.resolve(or),
+        unwrapOrFrom: (from) => Promise.resolve(from(error)),
         unwrapErrOr: extract,
         dangerouslyUnwrap: rejectWithValueUnwrapError,
         dangerouslyUnwrapErr: extract,
@@ -194,6 +197,7 @@ export const fromPromise = <const TValue, const TError>(
         )
     },
     unwrapOr: (or) => promise.catch(() => or),
+    unwrapOrFrom: (from) => promise.catch(from),
     unwrapErrOr: (or) => promise.then(() => or).catch(errorHandler),
     dangerouslyUnwrap: () => promise.catch(throwValueUnwrapError),
     dangerouslyUnwrapErr: async () => {
