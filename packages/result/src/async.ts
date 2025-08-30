@@ -45,7 +45,7 @@ export type ResultAsync<TValue, TError> = {
     dangerouslyUnwrapErr: () => Promise<TError>
 }
 
-const fromResultPromise = <const TValue, const TError, const THandledError>(
+export const fromResultPromise = <const TValue, const TError, const THandledError>(
     promise: Promise<Result<TValue, TError>>,
     errorHandler: (error: unknown) => THandledError,
 ): ResultAsync<TValue, TError | THandledError> => {
@@ -110,7 +110,7 @@ const fromResultPromise = <const TValue, const TError, const THandledError>(
     }
 }
 
-const fromSafeResultPromise = <const TValue, const TError>(
+export const fromSafeResultPromise = <const TValue, const TError>(
     promise: Promise<Result<TValue, TError>>,
 ): ResultAsync<TValue, TError> =>
     fromResultPromise(promise, (error) => {
@@ -288,5 +288,7 @@ export const ResultAsync = {
     safeguard: asyncSafeguard,
     fromPromise,
     fromSafePromise,
+    fromResultPromise,
+    fromSafeResultPromise,
     collapse: collapseAsync,
 }

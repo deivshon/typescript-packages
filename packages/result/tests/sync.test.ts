@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { err, ok, Result } from "../src"
+import { err, ok, Result, safeSyncFn, syncFn, syncSafeguard, trySync } from "../src"
+import { expectResultValuesEqual } from "./common"
 
 describe("sync result", () => {
     const okValue = 42
-    const okResult = ok(okValue)
-
     const errValue = "some error"
-    const errResult = err(errValue)
+
+    let okResult = ok(okValue)
+    let errResult = err(errValue)
+
+    beforeEach(() => {
+        okResult = ok(okValue)
+        errResult = err(errValue)
+    })
 
     const emptyPromise = Promise.resolve(null)
 
@@ -14,9 +20,6 @@ describe("sync result", () => {
         expect(okResult.dangerouslyUnwrap()).toBe(okValue)
         expect(errResult.dangerouslyUnwrapErr()).toBe(errValue)
     }
-
-    const expectResultValuesEqual = (a: Result<unknown, unknown>, b: Result<unknown, unknown>) =>
-        JSON.stringify(a) === JSON.stringify(b)
 
     describe("ok", () => {
         it("should create a sync ok value", () => {
@@ -368,5 +371,95 @@ describe("sync result", () => {
         it("should return the error of the err value being called on", () => {
             expect(errResult.dangerouslyUnwrapErr()).toBe(errValue)
         })
+    })
+})
+
+describe("sync result utilities", () => {
+    const nonThrowingFn = (a: number, b: number) => {
+        if (isNaN(a) || isNaN(b)) {
+            return err("NaN")
+        } else {
+            return ok(a + b)
+        }
+    }
+    const throwingFn = () => {
+        if (Math.random() > -1) {
+            throw new Error()
+        }
+
+        return ok(42)
+    }
+
+    describe("syncFn", () => {
+        it("should return an equivalent function to the one passed in", () => {
+            const processedFn = syncFn(nonThrowingFn)
+
+            const originalResult1 = nonThrowingFn(1, 2)
+            const originalResult2 = nonThrowingFn(1, NaN)
+            const processedResult1 = processedFn(1, 2)
+            const processedResult2 = processedFn(1, NaN)
+
+            expectResultValuesEqual(originalResult1, processedResult1)
+            expectResultValuesEqual(processedResult2, originalResult2)
+        })
+
+        it("should not protect from throws inside the original function", () => {
+            const processedFn = syncFn(throwingFn)
+            expect(processedFn).toThrow()
+        })
+    })
+
+    describe("safeSyncFn", () => {
+        it("should return an equivalent function to the one passed in if it doesn't throw", () => {
+            const processedFn = safeSyncFn(nonThrowingFn, () => "threw" as const)
+
+            const originalResult1 = nonThrowingFn(1, 2)
+            const originalResult2 = nonThrowingFn(1, NaN)
+            const processedResult1 = processedFn(1, 2)
+            const processedResult2 = processedFn(1, NaN)
+
+            expectResultValuesEqual(originalResult1, processedResult1)
+            expectResultValuesEqual(processedResult2, originalResult2)
+        })
+
+        it("should protect from throws inside the original function, returning an err value with the handled error", () => {
+            const processedFn = safeSyncFn(throwingFn, () => "threw" as const)
+            const processedResult = processedFn()
+
+            expect(processedResult.dangerouslyUnwrapErr()).toBe("threw")
+        })
+    })
+
+    {
+        const jsonParse = (value: string): unknown => JSON.parse(value)
+        const notJson = "{a:"
+        expect(() => jsonParse(notJson)).toThrow()
+
+        describe("trySync", () => {
+            it("should wrap the return value of the passed in function in a result, returning an error in case of a throw", () => {
+                expect(() => trySync(() => jsonParse(notJson))).not.toThrow()
+                expect(trySync(() => jsonParse(notJson)).dangerouslyUnwrapErr()).toBeInstanceOf(SyntaxError)
+            })
+        })
+
+        describe("syncSafeguard", () => {
+            it("should safeguard the function passed in by returning an err value in case of a throw", () => {
+                const safeguardedJsonParse = syncSafeguard(JSON.parse)
+
+                expect(() => safeguardedJsonParse(notJson)).not.toThrow()
+                expect(safeguardedJsonParse(notJson).dangerouslyUnwrapErr()).toBeInstanceOf(SyntaxError)
+            })
+        })
+    }
+})
+
+describe("result object", () => {
+    it("should have the proper sync utilities assigned", () => {
+        expect(Result.ok).toBe(ok)
+        expect(Result.err).toBe(err)
+        expect(Result.fn).toBe(syncFn)
+        expect(Result.safeFn).toBe(safeSyncFn)
+        expect(Result.try).toBe(trySync)
+        expect(Result.safeguard).toBe(syncSafeguard)
     })
 })
