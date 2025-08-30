@@ -1,7 +1,6 @@
 import { asyncFn, errAsync, fromSafePromise, ResultAsync } from "./async"
 import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
-import { tap } from "./internal/effects"
-import { identity } from "./internal/values"
+import { identity, syncCatchAndIgnore } from "./internal/utils"
 
 export interface $Result<TValue, TError> {
     async: false
@@ -61,9 +60,15 @@ export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
         bind: (binder) => binder(value),
         bindErr: self,
         asyncBind: (binder) => asyncFn(binder)(value),
-        tap: (effect) => tap(value, effect, extract, ok),
+        tap: (effect) => {
+            syncCatchAndIgnore(() => effect(value))
+            return ok(value)
+        },
         tapErr: self,
-        through: (effect) => tap(value, effect, (result) => (result.success ? ok(value) : err(result.error)), identity),
+        through: (effect) => {
+            const effectResult = effect(value)
+            return effectResult.success ? ok(value) : err(effectResult.error)
+        },
         asyncThrough: (effect) => asyncFn(effect)(value).map(extract),
         unwrapOr: extract,
         unwrapOrFrom: extract,
@@ -89,7 +94,10 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
         bindErr: apply,
         asyncBind: asyncSelf,
         tap: self,
-        tapErr: (effect) => tap(error, effect, extract, err),
+        tapErr: (effect) => {
+            syncCatchAndIgnore(() => effect(error))
+            return err(error)
+        },
         through: self,
         asyncThrough: asyncSelf,
         unwrapOr: identity,

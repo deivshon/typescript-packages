@@ -1,6 +1,4 @@
-import { rejectWithErrorUnwrapError, rejectWithValueUnwrapError, throwValueUnwrapError, UnwrapError } from "./errors"
-import { tap } from "./internal/effects"
-import { anonymousError, identity } from "./internal/values"
+import { asyncCatchAndIgnore, identity } from "./internal/utils"
 import { err, ok, Result } from "./sync"
 
 export type ResultAsync<TValue, TError> = {
@@ -47,204 +45,69 @@ export type ResultAsync<TValue, TError> = {
     dangerouslyUnwrapErr: () => Promise<TError>
 }
 
-export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> => {
-    const self = () => okAsync(value)
-    const extract = () => Promise.resolve(value)
-
-    return {
-        async: true,
-        then: (onFulfilled, onRejected) => Promise.resolve(ok(value)).then(onFulfilled, onRejected),
-        map: (mapper) => {
-            const mapped = mapper(value)
-            return mapped instanceof Promise ? fromSafePromise(mapped) : okAsync(mapped)
-        },
-        mapErr: self,
-        bind: (binder) => asyncFn(binder)(value),
-        bindErr: self,
-        tap: (effect) => tap(value, effect, () => value, okAsync),
-        tapErr: self,
-        through: (effect) => asyncFn(effect)(value).map(() => value),
-        unwrapOr: extract,
-        unwrapOrFrom: extract,
-        dangerouslyUnwrap: extract,
-        dangerouslyUnwrapErr: rejectWithErrorUnwrapError,
-    }
-}
-
-export const errAsync = <const TError, const TValue = never>(error: TError): ResultAsync<TValue, TError> => {
-    const self = () => errAsync(error)
-    const extract = () => Promise.resolve(error)
-
-    return {
-        async: true,
-        then: (onFulfilled, onRejected) => Promise.resolve(err(error)).then(onFulfilled, onRejected),
-        map: self,
-        mapErr: (mapper) => {
-            const mapped = mapper(error)
-            return mapped instanceof Promise ? fromSafeErrorPromise(mapped) : errAsync(mapped)
-        },
-        bind: self,
-        bindErr: (binder) => asyncFn(binder)(error),
-        tap: self,
-        tapErr: (effect) => tap(error, effect, () => error, errAsync),
-        through: self,
-        unwrapOr: (or) => Promise.resolve(or),
-        unwrapOrFrom: (from) => Promise.resolve(from(error)),
-        dangerouslyUnwrap: rejectWithValueUnwrapError,
-        dangerouslyUnwrapErr: extract,
-    }
-}
-
-export const fromPromise = <const TValue, const TError>(
-    promise: Promise<TValue>,
-    errorHandler: (error: unknown) => TError | Promise<TError>,
-): ResultAsync<TValue, TError> => ({
-    async: true,
-    then: (onFulfilled, onRejected) =>
-        promise
-            .then(ok)
-            .catch(async (error: unknown) => err(await errorHandler(error)))
-            .then(onFulfilled, onRejected),
-    map: (mapper) =>
-        fromPromise(
-            promise.then(async (value) => await mapper(value)),
-            errorHandler,
-        ),
-    mapErr: (mapper) => fromPromise(promise, async (error) => await mapper(await errorHandler(error))),
-    bind: <const TBoundValue, const TBoundError>(
-        binder: (
-            value: TValue,
-        ) =>
-            | Result<TBoundValue, TBoundError>
-            | Promise<Result<TBoundValue, TBoundError>>
-            | ResultAsync<TBoundValue, TBoundError>,
-    ) => {
-        const [createBoundError, isBoundError] = anonymousError<TBoundError>()
-
-        return fromPromise<TBoundValue, TError | TBoundError>(
-            promise.then(async (value) => {
-                const bound = await binder(value)
-                if (bound.success) {
-                    return bound.value
-                } else {
-                    throw createBoundError(bound.error)
-                }
-            }),
-            (error) => (isBoundError(error) ? error.value : errorHandler(error)),
-        )
-    },
-    bindErr: <const TBoundValue, const TBoundError>(
-        binder: (
-            error: TError,
-        ) =>
-            | Result<TBoundValue, TBoundError>
-            | Promise<Result<TBoundValue, TBoundError>>
-            | ResultAsync<TBoundValue, TBoundError>,
-    ) => {
-        const [createBoundError, isBoundError] = anonymousError<TBoundError>()
-
-        return fromPromise<TValue | TBoundValue, TBoundError>(
-            promise.catch(async (error: unknown) => {
-                const bound = await binder(await errorHandler(error))
-                if (bound.success) {
-                    return bound.value
-                } else {
-                    throw createBoundError(bound.error)
-                }
-            }),
-            (error) => {
-                if (isBoundError(error)) {
-                    return error.value
-                } else {
-                    throw error
-                }
-            },
-        )
-    },
-    tap: (effect) =>
-        fromPromise(
-            promise.then((value) => tap(value, effect, () => value, identity)),
-            errorHandler,
-        ),
-    tapErr: (effect) =>
-        fromPromise(promise, async (error) => {
-            const normalized = await errorHandler(error)
-            return tap(normalized, effect, () => normalized, identity)
-        }),
-    through: <const TEffectError>(
-        effect: (
-            value: TValue,
-        ) =>
-            | Result<unknown, TEffectError>
-            | Promise<Result<unknown, TEffectError>>
-            | ResultAsync<unknown, TEffectError>,
-    ) => {
-        const [createEffectError, isEffectError] = anonymousError<TEffectError>()
-
-        return fromPromise(
-            promise.then(async (value) => {
-                const result = await effect(value)
-                if (result.success) {
-                    return value
-                } else {
-                    throw createEffectError(result.error)
-                }
-            }),
-            async (error) => (isEffectError(error) ? error.value : errorHandler(error)),
-        )
-    },
-    unwrapOr: (or) => promise.catch(() => or),
-    unwrapOrFrom: (from) => promise.catch(from),
-    dangerouslyUnwrap: () => promise.catch(throwValueUnwrapError),
-    dangerouslyUnwrapErr: async () => {
-        const [createThenError, isThenError] = anonymousError<UnwrapError>()
-
-        try {
-            void (await promise)
-            throw createThenError(new UnwrapError("error"))
-        } catch (error) {
-            if (isThenError(error)) {
-                throw error.value
-            } else {
-                return errorHandler(error)
-            }
-        }
-    },
-})
-
-export const fromSafePromise = <const TValue, const TError = never>(
-    promise: Promise<TValue>,
-): ResultAsync<TValue, TError> =>
-    fromPromise(promise, (error) => {
-        throw error
-    })
-
-const fromSafeErrorPromise = <const TError, const TValue = never>(
-    promise: Promise<TError>,
-): ResultAsync<TValue, TError> => fromPromise(Promise.reject(new Error()), () => promise)
-
 const fromResultPromise = <const TValue, const TError, const THandledError>(
     promise: Promise<Result<TValue, TError>>,
     errorHandler: (error: unknown) => THandledError,
 ): ResultAsync<TValue, TError | THandledError> => {
-    const [createResultError, isResultError] = anonymousError<TError>()
+    const handled = promise.catch((error: unknown) => err(errorHandler(error)))
 
-    return fromPromise(
-        promise.then((result) => {
-            if (result.success) {
-                return result.value
-            } else {
-                throw createResultError(result.error)
-            }
-        }),
-        (error) => {
-            if (isResultError(error)) {
-                return error.value
-            } else {
-                return errorHandler(error)
-            }
-        },
-    )
+    return {
+        async: true,
+        then: (onFulfilled, onRejected) => handled.then(onFulfilled, onRejected),
+        map: (mapper) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? ok(await mapper(result.value)) : err(result.error))),
+            ),
+        mapErr: (mapper) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? ok(result.value) : err(await mapper(result.error)))),
+            ),
+        bind: (binder) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? await binder(result.value) : err(result.error))),
+            ),
+        bindErr: (binder) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? ok(result.value) : await binder(result.error))),
+            ),
+        tap: (effect) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => {
+                    if (!result.success) {
+                        return err(result.error)
+                    }
+
+                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.value)))
+                    return ok(result.value)
+                }),
+            ),
+        tapErr: (effect) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => {
+                    if (result.success) {
+                        return ok(result.value)
+                    }
+
+                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.error)))
+                    return err(result.error)
+                }),
+            ),
+        through: (effect) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => {
+                    if (!result.success) {
+                        return err(result.error)
+                    }
+
+                    const effectResult = await effect(result.value)
+                    return effectResult.success ? ok(result.value) : err(effectResult.error)
+                }),
+            ),
+        unwrapOr: (or) => handled.then((result) => result.unwrapOr(or)),
+        unwrapOrFrom: (from) => handled.then((result) => result.unwrapOrFrom(from)),
+        dangerouslyUnwrap: () => handled.then((result) => result.dangerouslyUnwrap()),
+        dangerouslyUnwrapErr: () => handled.then((result) => result.dangerouslyUnwrapErr()),
+    }
 }
 
 const fromSafeResultPromise = <const TValue, const TError>(
@@ -254,10 +117,121 @@ const fromSafeResultPromise = <const TValue, const TError>(
         throw error
     })
 
-export const fromSyncResult = <const TValue, const TError>(
-    result: Result<TValue, TError>,
-): ResultAsync<TValue, TError> => (result.success ? okAsync(result.value) : errAsync(result.error))
+export const okAsync = <const TValue, const TError = never>(value: TValue): ResultAsync<TValue, TError> =>
+    fromSafeResultPromise(Promise.resolve(ok(value)))
 
+export const errAsync = <const TError>(error: TError): ResultAsync<never, TError> =>
+    fromSafeResultPromise(Promise.resolve(err(error)))
+
+export const fromPromise = <const TValue, const TError>(
+    promise: Promise<TValue>,
+    errorHandler: (error: unknown) => TError | Promise<TError>,
+): ResultAsync<TValue, TError> => {
+    const handled = promise.then(ok).catch(async (error: unknown) => {
+        const handledError: TError = await errorHandler(error)
+        return err(handledError)
+    })
+
+    return {
+        async: true,
+        then: (onFulfilled, onRejected) => handled.then(onFulfilled, onRejected),
+        map: (mapper) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? ok(await mapper(result.value)) : err(result.error))),
+            ),
+        mapErr: (mapper) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => (result.success ? ok(result.value) : err(await mapper(result.error)))),
+            ),
+        bind: <const TBoundValue, const TBoundError>(
+            binder: (
+                value: TValue,
+            ) =>
+                | Result<TBoundValue, TBoundError>
+                | Promise<Result<TBoundValue, TBoundError>>
+                | ResultAsync<TBoundValue, TBoundError>,
+        ) =>
+            fromSafeResultPromise<TBoundValue, TError | TBoundError>(
+                handled.then(async (result) => {
+                    if (!result.success) {
+                        return err(result.error)
+                    }
+
+                    const normalized = await binder(result.value)
+                    return normalized
+                }),
+            ),
+        bindErr: <const TBoundValue, const TBoundError>(
+            binder: (
+                error: TError,
+            ) =>
+                | Result<TBoundValue, TBoundError>
+                | Promise<Result<TBoundValue, TBoundError>>
+                | ResultAsync<TBoundValue, TBoundError>,
+        ) =>
+            fromSafeResultPromise<TValue | TBoundValue, TBoundError>(
+                handled.then(async (result) => {
+                    if (result.success) {
+                        return ok(result.value)
+                    }
+
+                    const normalized = await binder(result.error)
+                    return normalized
+                }),
+            ),
+        tap: (effect) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => {
+                    if (!result.success) {
+                        return err(result.error)
+                    }
+
+                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.value)))
+                    return ok(result.value)
+                }),
+            ),
+        tapErr: (effect) =>
+            fromSafeResultPromise(
+                handled.then(async (result) => {
+                    if (result.success) {
+                        return ok(result.value)
+                    }
+
+                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.error)))
+                    return err(result.error)
+                }),
+            ),
+        through: <const TEffectError>(
+            effect: (
+                value: TValue,
+            ) =>
+                | Result<unknown, TEffectError>
+                | Promise<Result<unknown, TEffectError>>
+                | ResultAsync<unknown, TEffectError>,
+        ) =>
+            fromSafeResultPromise<TValue, TError | TEffectError>(
+                handled.then(async (result) => {
+                    if (!result.success) {
+                        return err(result.error)
+                    }
+
+                    const effectResult = await effect(result.value)
+                    return effectResult.success ? ok(result.value) : err(effectResult.error)
+                }),
+            ),
+        unwrapOr: (or) => handled.then((result) => result.unwrapOr(or)),
+        unwrapOrFrom: (from) => handled.then((result) => result.unwrapOrFrom(from)),
+        dangerouslyUnwrap: () => handled.then((result) => result.dangerouslyUnwrap()),
+        dangerouslyUnwrapErr: () => handled.then((result) => result.dangerouslyUnwrapErr()),
+    }
+}
+
+export const fromSafePromise = <const TValue, const TError = never>(
+    promise: Promise<TValue>,
+): ResultAsync<TValue, TError> =>
+    fromPromise(promise, (error) => {
+        throw error
+    })
 export const asyncFn =
     <TArgs extends readonly unknown[], const TValue, const TError>(
         fn: (...args: TArgs) => Result<TValue, TError> | Promise<Result<TValue, TError>> | ResultAsync<TValue, TError>,
@@ -270,7 +244,7 @@ export const asyncFn =
         } else if (result.async) {
             return result
         } else {
-            return fromSyncResult(result)
+            return fromSafeResultPromise(Promise.resolve(result))
         }
     }
 
@@ -292,7 +266,7 @@ export const safeAsyncFn =
         } else if (result.async) {
             return result
         } else {
-            return fromSyncResult(result)
+            return fromSafeResultPromise(Promise.resolve(result))
         }
     }
 
@@ -314,6 +288,5 @@ export const ResultAsync = {
     safeguard: asyncSafeguard,
     fromPromise,
     fromSafePromise,
-    fromSync: fromSyncResult,
     collapse: collapseAsync,
 }

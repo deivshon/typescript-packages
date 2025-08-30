@@ -4,7 +4,6 @@ export {
     errAsync,
     fromPromise,
     fromSafePromise,
-    fromSyncResult,
     okAsync,
     ResultAsync,
     safeAsyncFn,
