@@ -7,10 +7,11 @@
         "typecheck:packages": "pnpm -r --parallel --filter \"./packages/*\" typecheck",
         "typecheck:packages:watch": "pnpm -r --parallel --filter \"./packages/*\" typecheck:watch",
         "lint": "pnpm -r --parallel lint",
+        "test:packages": "pnpm -r --parallel --filter \"./packages/*\" test",
         "attw:packages": "pnpm -r --parallel --filter \"./packages/*\" attw",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "checklist": "pnpm build:packages && pnpm typecheck && pnpm lint && pnpm attw:packages && pnpm format:check",
+        "checklist": "pnpm build:packages && pnpm typecheck && pnpm lint && pnpm test:packages && pnpm attw:packages && pnpm format:check",
         "clean": "rm -rf ./packages/*/dist ./scripts/*/dist ./configs/*/dist ./test/*/dist ./test/*/.next",
         "purge": "pnpm clean && rm -rf node_modules ./packages/*/node_modules ./scripts/*/node_modules ./configs/*/node_modules ./test/*/node_modules"
     },
@@ -24,6 +25,7 @@
         "prettier": "^3.6.2",
         "tsdown": "^0.14.1",
         "typescript": "~5.8.3",
-        "typescript-eslint": "^8.35.1"
+        "typescript-eslint": "^8.35.1",
+        "vitest": "^3.2.4"
     }
 }

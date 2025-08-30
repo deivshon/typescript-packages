@@ -1,5 +1,5 @@
 {
     "extends": "../../configs/typescript/tsconfig.neutral.json",
-    "include": ["src"],
+    "include": ["src", "tests"],
     "exclude": ["node_modules", "dist"]
 }
