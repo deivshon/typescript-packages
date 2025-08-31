@@ -1,7 +1,6 @@
 {
     "scripts": {
         "build:packages": "pnpm -C ./scripts/build execute",
-        "dev:packages": "pnpm build:packages && pnpm -r --parallel --filter \"./packages/*\" dev",
         "typecheck": "pnpm -r --parallel typecheck",
         "typecheck:watch": "pnpm -r --parallel typecheck:watch",
         "typecheck:packages": "pnpm -r --parallel --filter \"./packages/*\" typecheck",
