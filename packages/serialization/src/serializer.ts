@@ -1,116 +1,155 @@
 import { StandardSchemaV1 } from "@standard-schema/spec"
 
+type SerializationResult = { success: true; value: string } | { success: false }
+type DeserializationResult<T> = { success: true; value: T } | { success: false }
+
+const ok = <T>(value: T) => ({ success: true, value }) as const
+const err = () => ({ success: false }) as const
+
 export type Serializer<T> = {
-    serialize: (value: T) => string
-    deserialize: (serialized: string) => T
+    serialize: (value: T) => SerializationResult
+    deserialize: (serialized: string) => DeserializationResult<T>
 }
 
 export const string: Serializer<string> = {
-    serialize: (value) => quote(value),
-    deserialize: (serialized) => unqoute(serialized),
+    serialize: (value) => ok(quote(value)),
+    deserialize: (serialized) => ok(unqoute(serialized)),
 }
 
 export const number: Serializer<number> = {
-    serialize: (value) => String(value),
-    deserialize: (serialized) => Number(serialized),
+    serialize: (value) => ok(String(value)),
+    deserialize: (serialized) => ok(Number(serialized)),
 }
 
 export const boolean: Serializer<boolean> = {
-    serialize: (value) => (value ? $serialized.true : $serialized.false),
-    deserialize: (serialized) => serialized === $serialized.true,
+    serialize: (value) => ok(value ? $serialized.true : $serialized.false),
+    deserialize: (serialized) => ok(serialized === $serialized.true),
 }
 
 export const date: Serializer<Date> = {
     serialize: (value) => {
         try {
-            return quote(value.toISOString())
+            return ok(quote(value.toISOString()))
         } catch {
-            return $serialized.invalidDate
+            return ok($serialized.invalidDate)
         }
     },
     deserialize: (serialized) =>
-        serialized === $serialized.invalidDate ? new Date(NaN) : new Date(unqoute(serialized)),
+        ok(serialized === $serialized.invalidDate ? new Date(NaN) : new Date(unqoute(serialized))),
 }
 
 export const nullable = <T>(serializer: Serializer<T>): Serializer<T | null> => ({
-    serialize: (value) => (value === null ? $serialized.null : serializer.serialize(value)),
-    deserialize: (serialized) => (serialized === $serialized.null ? null : serializer.deserialize(serialized)),
+    serialize: (value) => (value === null ? ok($serialized.null) : serializer.serialize(value)),
+    deserialize: (serialized) => (serialized === $serialized.null ? ok(null) : serializer.deserialize(serialized)),
 })
 
 export const optional = <T>(serializer: Serializer<T>): Serializer<T | undefined> => ({
-    serialize: (value) => (value === undefined ? $serialized.undefined : serializer.serialize(value)),
+    serialize: (value) => (value === undefined ? ok($serialized.undefined) : serializer.serialize(value)),
     deserialize: (serialized) =>
-        serialized === $serialized.undefined ? undefined : serializer.deserialize(serialized),
+        serialized === $serialized.undefined ? ok(undefined) : serializer.deserialize(serialized),
 })
 
-export const set =
-    <T>(serializer: Serializer<T>) =>
-    (initial: Set<T>): Serializer<Set<T>> => ({
-        serialize: (value) => enhancedJsonStringify(Array.from(value).map(serializer.serialize)),
-        deserialize: (serialized) => {
-            try {
-                const deserialized = enhancedJsonParse(serialized)
-                if (!Array.isArray(deserialized)) {
-                    return initial
-                }
-                const unknownItemsArray: unknown[] = deserialized
+export const set = <T>(serializer: Serializer<T>): Serializer<Set<T>> => ({
+    serialize: (value) => {
+        try {
+            return ok(enhancedJsonStringify(Array.from(value).map(serializer.serialize)))
+        } catch {
+            return err()
+        }
+    },
+    deserialize: (serialized) => {
+        let deserialized
+        try {
+            deserialized = enhancedJsonParse(serialized)
+        } catch {
+            return err()
+        }
 
-                const setItems: T[] = []
-                for (const item of unknownItemsArray) {
-                    if (typeof item !== "string") {
-                        return initial
-                    }
+        if (!Array.isArray(deserialized)) {
+            return err()
+        }
+        const unknownItemsArray: unknown[] = deserialized
 
-                    setItems.push(serializer.deserialize(item))
-                }
-
-                return new Set(setItems)
-            } catch {
-                return initial
+        const setItems: T[] = []
+        for (const item of unknownItemsArray) {
+            if (typeof item !== "string") {
+                return err()
             }
-        },
-    })
 
-export const map =
-    <TKey, TValue>(keySerializer: Serializer<TKey>, valueSerializer: Serializer<TValue>) =>
-    (initial: Map<TKey, TValue>): Serializer<Map<TKey, TValue>> => ({
-        serialize: (value) =>
-            enhancedJsonStringify(
-                Array.from(
-                    value
-                        .entries()
-                        .map(([key, value]) => [keySerializer.serialize(key), valueSerializer.serialize(value)]),
-                ),
-            ),
-        deserialize: (serialized) => {
-            try {
-                const deserialized = enhancedJsonParse(serialized)
-                if (!Array.isArray(deserialized)) {
-                    return initial
-                }
-                const unknownEntriesArray: unknown[] = deserialized
-
-                const entries: Array<[TKey, TValue]> = []
-                for (const unknownEntry of unknownEntriesArray) {
-                    if (!Array.isArray(unknownEntry) || unknownEntry.length > 2) {
-                        return initial
-                    }
-
-                    const key: unknown = unknownEntry.at(0)
-                    const value: unknown = unknownEntry.at(1)
-                    if (typeof key !== "string" || typeof value !== "string") {
-                        return initial
-                    }
-
-                    entries.push([keySerializer.deserialize(key), valueSerializer.deserialize(value)])
-                }
-
-                return new Map(entries)
-            } catch {
-                return initial
+            const deserialized = serializer.deserialize(item)
+            if (!deserialized.success) {
+                return err()
             }
-        },
-    })
+            setItems.push(deserialized.value)
+        }
+
+        return ok(new Set(setItems))
+    },
+})
+
+export const map = <TKey, TValue>(
+    keySerializer: Serializer<TKey>,
+    valueSerializer: Serializer<TValue>,
+): Serializer<Map<TKey, TValue>> => ({
+    serialize: (value) => {
+        const entriesResults = Array.from(
+            value
+                .entries()
+                .map(([key, value]) => [keySerializer.serialize(key), valueSerializer.serialize(value)] as const),
+        )
+
+        const entries: Array<[string, string]> = []
+        for (const result of entriesResults) {
+            if (!result[0].success || !result[1].success) {
+                return err()
+            }
+
+            entries.push([result[0].value, result[1].value])
+        }
+
+        try {
+            return ok(enhancedJsonStringify(entries))
+        } catch {
+            return err()
+        }
+    },
+    deserialize: (serialized) => {
+        let deserialized
+        try {
+            deserialized = enhancedJsonParse(serialized)
+        } catch {
+            return err()
+        }
+
+        if (!Array.isArray(deserialized)) {
+            return err()
+        }
+        const unknownEntriesArray: unknown[] = deserialized
+
+        const entries: Array<[TKey, TValue]> = []
+        for (const unknownEntry of unknownEntriesArray) {
+            if (!Array.isArray(unknownEntry) || unknownEntry.length > 2) {
+                return err()
+            }
+
+            const serializedKey: unknown = unknownEntry.at(0)
+            const serializedValue: unknown = unknownEntry.at(1)
+            if (typeof serializedKey !== "string" || typeof serializedValue !== "string") {
+                return err()
+            }
+
+            const deserializedKey = keySerializer.deserialize(serializedKey)
+            const deserializedValue = valueSerializer.deserialize(serializedValue)
+            if (!deserializedKey.success || !deserializedValue.success) {
+                return err()
+            }
+
+            entries.push([deserializedKey.value, deserializedValue.value])
+        }
+
+        return ok(new Map(entries))
+    },
+})
 
 export type SchemaSerializable =
     | string
@@ -121,37 +160,38 @@ export type SchemaSerializable =
     | Array<Exclude<SchemaSerializable, undefined>>
     | { [TKey in string | number]: SchemaSerializable }
 
-const baseSchema =
-    <TSchema extends StandardSchemaV1>(
-        schema: StandardSchemaV1.InferInput<TSchema> extends SchemaSerializable ? TSchema : never,
-    ) =>
-    (initial: StandardSchemaV1.InferInput<TSchema>): Serializer<StandardSchemaV1.InferInput<TSchema>> => ({
-        serialize: (value: StandardSchemaV1.InferInput<TSchema>) => enhancedJsonStringify(value),
-        deserialize: (serialized: string) => {
-            try {
-                const deserialized = enhancedJsonParse(serialized)
-
-                const validation = schema["~standard"].validate(deserialized)
-                if (validation instanceof Promise) {
-                    return initial
-                }
-
-                if (validation.issues) {
-                    return initial
-                } else {
-                    return validation.value
-                }
-            } catch {
-                return initial
-            }
-        },
-    })
-
-export const schema = baseSchema
-export const schemaWithFallback = <TSchema extends StandardSchemaV1>(
+export const schema = <TSchema extends StandardSchemaV1>(
     schema: StandardSchemaV1.InferInput<TSchema> extends SchemaSerializable ? TSchema : never,
-    fallback: StandardSchemaV1.InferInput<TSchema>,
-): Serializer<StandardSchemaV1.InferInput<TSchema>> => baseSchema(schema)(fallback)
+): Serializer<StandardSchemaV1.InferInput<TSchema>> => ({
+    serialize: (value: StandardSchemaV1.InferInput<TSchema>) => {
+        try {
+            return ok(enhancedJsonStringify(value))
+        } catch {
+            return err()
+        }
+    },
+    deserialize: (serialized: string) => {
+        let deserialized
+        try {
+            deserialized = enhancedJsonParse(serialized)
+        } catch {
+            return err()
+        }
+
+        let validation
+        try {
+            validation = schema["~standard"].validate(deserialized)
+        } catch {
+            return err()
+        }
+
+        if (validation instanceof Promise || validation.issues) {
+            return err()
+        }
+
+        return ok(validation.value)
+    },
+})
 
 const $serialized = {
     true: "true",

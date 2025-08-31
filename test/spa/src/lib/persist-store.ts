@@ -1,5 +1,5 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
-import { boolean, date, map, nullable, number, schema, schemaWithFallback, set, string } from "@deivshon/serialization"
+import { boolean, date, map, nullable, number, schema, set, string } from "@deivshon/serialization"
 import { local, session, url } from "@deivshon/storage"
 import { persist } from "@deivshon/store-persist-middleware"
 import { type } from "arktype"
@@ -96,7 +96,7 @@ const persistedStore = createStore<PersistedStore>(
             url4: [nullable(date), url()],
             profile: [schema(profileSchema), local()],
             movie: [schema(movieSchema.or("null | undefined")), url()],
-            numberSet: [set(schemaWithFallback(type("number | null"), null)), url()],
+            numberSet: [set(schema(type("number | null"))), url()],
             numberMap: [map(number, number), url()],
         }),
     ],

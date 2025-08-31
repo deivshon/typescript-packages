@@ -50,7 +50,7 @@ export const persist = <TState extends Record<string, unknown>>(
             }
 
             const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(stored[key])
-            values[key] = deserialized
+            values[key] = deserialized.success ? deserialized.value : initialState[key]
         }
 
         return values
@@ -156,8 +156,13 @@ export const persist = <TState extends Record<string, unknown>>(
                 const serialized = normalizeSerializer(serializer, initialState[key]).serialize(updatedValue)
 
                 const current = values.get(storage)
+
+                if (!serialized.success) {
+                    continue
+                }
+
                 values.set(storage, {
-                    update: { ...current?.update, [key]: serialized },
+                    update: { ...current?.update, [key]: serialized.value },
                     options: { ...current?.options, [key]: options },
                 })
             }
