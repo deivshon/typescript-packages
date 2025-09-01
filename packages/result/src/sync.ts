@@ -2,51 +2,41 @@ import { asyncFn, errAsync, fromSafePromise, ResultAsync } from "./async"
 import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
 import { identity, syncCatchAndIgnore } from "./internal/utils"
 
-export interface $Result<TValue, TError> {
+export interface $Result<T, E> {
     async: false
-    map: <const TMappedValue>(mapper: (value: TValue) => TMappedValue) => Result<TMappedValue, TError>
-    mapErr: <const TMappedError>(mapper: (error: TError) => TMappedError) => Result<TValue, TMappedError>
-    asyncMap: <const TMappedValue>(
-        mapper: (value: TValue) => Promise<TMappedValue>,
-    ) => ResultAsync<TMappedValue, TError>
-    bind: <const TBoundValue, const TBoundError>(
-        binder: (value: TValue) => Result<TBoundValue, TBoundError>,
-    ) => Result<TBoundValue, TError | TBoundError>
-    bindErr: <const TBoundValue, const TBoundError>(
-        binder: (error: TError) => Result<TBoundValue, TBoundError>,
-    ) => Result<TValue | TBoundValue, TBoundError>
-    asyncBind: <const TBoundValue, const TBoundError>(
-        asyncBinder: (
-            value: TValue,
-        ) => Promise<Result<TBoundValue, TBoundError>> | ResultAsync<TBoundValue, TBoundError>,
-    ) => ResultAsync<TBoundValue, TError | TBoundError>
-    tap: (effect: (value: TValue) => unknown) => Result<TValue, TError>
-    tapErr: (effect: (error: TError) => unknown) => Result<TValue, TError>
-    through: <const TEffectError>(
-        effect: (value: TValue) => Result<unknown, TEffectError>,
-    ) => Result<TValue, TError | TEffectError>
-    asyncThrough: <const TEffectError>(
-        effect: (value: TValue) => Promise<Result<unknown, TEffectError>> | ResultAsync<unknown, TEffectError>,
-    ) => ResultAsync<TValue, TError | TEffectError>
-    unwrapOr: <const TOr>(value: TOr) => TValue | TOr
-    unwrapOrFrom: <const TOr>(from: (error: TError) => TOr) => TValue | TOr
-    dangerouslyUnwrap: () => TValue
-    dangerouslyUnwrapErr: () => TError
+    map: <const M>(mapper: (value: T) => M) => Result<M, E>
+    mapErr: <const M>(mapper: (error: E) => M) => Result<T, M>
+    asyncMap: <const M>(mapper: (value: T) => Promise<M>) => ResultAsync<M, E>
+    bind: <const BT, const BE>(binder: (value: T) => Result<BT, BE>) => Result<BT, E | BE>
+    bindErr: <const BT, const BE>(binder: (error: E) => Result<BT, BE>) => Result<T | BT, BE>
+    asyncBind: <const BT, const BE>(
+        asyncBinder: (value: T) => Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
+    ) => ResultAsync<BT, E | BE>
+    tap: (effect: (value: T) => unknown) => Result<T, E>
+    tapErr: (effect: (error: E) => unknown) => Result<T, E>
+    through: <const EE>(effect: (value: T) => Result<unknown, EE>) => Result<T, E | EE>
+    asyncThrough: <const EE>(
+        effect: (value: T) => Promise<Result<unknown, EE>> | ResultAsync<unknown, EE>,
+    ) => ResultAsync<T, E | EE>
+    unwrapOr: <const O>(value: O) => T | O
+    unwrapOrFrom: <const O>(from: (error: E) => O) => T | O
+    dangerouslyUnwrap: () => T
+    dangerouslyUnwrapErr: () => E
 }
 
-export interface Ok<TValue, TError> extends $Result<TValue, TError> {
+export interface Ok<T, E> extends $Result<T, E> {
     success: true
-    value: TValue
+    value: T
 }
 
-export interface Err<TValue, TError> extends $Result<TValue, TError> {
+export interface Err<T, E> extends $Result<T, E> {
     success: false
-    error: TError
+    error: E
 }
 
-export type Result<TValue, TError> = Ok<TValue, TError> | Err<TValue, TError>
+export type Result<T, E> = Ok<T, E> | Err<T, E>
 
-export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
+export const ok = <const T>(value: T): Ok<T, never> => {
     const self = () => ok(value)
     const extract = () => value
 
@@ -77,11 +67,11 @@ export const ok = <const TValue>(value: TValue): Ok<TValue, never> => {
     }
 }
 
-export const err = <const TError>(error: TError): Err<never, TError> => {
+export const err = <const E>(error: E): Err<never, E> => {
     const self = () => err(error)
     const asyncSelf = () => errAsync(error)
     const extract = () => error
-    const apply = <const T>(fn: (error: TError) => T): T => fn(error)
+    const apply = <const T>(fn: (error: E) => T): T => fn(error)
 
     return {
         async: false,
@@ -108,16 +98,16 @@ export const err = <const TError>(error: TError): Err<never, TError> => {
 }
 
 export const syncFn =
-    <TArgs extends readonly unknown[], const TValue, const TError>(fn: (...args: TArgs) => Result<TValue, TError>) =>
-    (...args: TArgs) =>
+    <A extends readonly unknown[], const T, const E>(fn: (...args: A) => Result<T, E>) =>
+    (...args: A) =>
         fn(...args)
 
 export const safeSyncFn =
-    <TArgs extends readonly unknown[], const TValue, const TError, const THandledError>(
-        fn: (...args: TArgs) => Result<TValue, TError>,
-        errorHandler: (error: unknown) => THandledError,
+    <A extends readonly unknown[], const T, const E, const HE>(
+        fn: (...args: A) => Result<T, E>,
+        errorHandler: (error: unknown) => HE,
     ) =>
-    (...args: TArgs): Result<TValue, TError | THandledError> => {
+    (...args: A): Result<T, E | HE> => {
         try {
             return fn(...args)
         } catch (error) {
@@ -125,7 +115,7 @@ export const safeSyncFn =
         }
     }
 
-export const trySync = <const TValue>(fn: () => TValue): Result<TValue, unknown> => {
+export const trySync = <const T>(fn: () => T): Result<T, unknown> => {
     try {
         return ok(fn())
     } catch (error) {
@@ -134,12 +124,11 @@ export const trySync = <const TValue>(fn: () => TValue): Result<TValue, unknown>
 }
 
 export const syncSafeguard =
-    <TArgs extends readonly unknown[], const TValue>(fn: (...args: TArgs) => TValue) =>
-    (...args: TArgs): Result<TValue, unknown> =>
+    <A extends readonly unknown[], const T>(fn: (...args: A) => T) =>
+    (...args: A): Result<T, unknown> =>
         trySync(() => fn(...args))
 
-export const collapseSync = <const TValue, const TError>(result: Result<TValue, TError>): Result<TValue, TError> =>
-    result
+export const collapseSync = <const T, const E>(result: Result<T, E>): Result<T, E> => result
 
 export const Result = {
     ok,

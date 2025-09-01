@@ -87,10 +87,7 @@ export const set = <T>(serializer: Serializer<T>): Serializer<Set<T>> => ({
     },
 })
 
-export const map = <TKey, TValue>(
-    keySerializer: Serializer<TKey>,
-    valueSerializer: Serializer<TValue>,
-): Serializer<Map<TKey, TValue>> => ({
+export const map = <K, V>(keySerializer: Serializer<K>, valueSerializer: Serializer<V>): Serializer<Map<K, V>> => ({
     serialize: (value) => {
         const entriesResults = Array.from(
             value
@@ -126,7 +123,7 @@ export const map = <TKey, TValue>(
         }
         const unknownEntriesArray: unknown[] = deserialized
 
-        const entries: Array<[TKey, TValue]> = []
+        const entries: Array<[K, V]> = []
         for (const unknownEntry of unknownEntriesArray) {
             if (!Array.isArray(unknownEntry) || unknownEntry.length > 2) {
                 return err()
@@ -158,12 +155,12 @@ export type SchemaSerializable =
     | null
     | undefined
     | Array<Exclude<SchemaSerializable, undefined>>
-    | { [TKey in string | number]: SchemaSerializable }
+    | { [K in string | number]: SchemaSerializable }
 
-export const schema = <TSchema extends StandardSchemaV1>(
-    schema: StandardSchemaV1.InferInput<TSchema> extends SchemaSerializable ? TSchema : never,
-): Serializer<StandardSchemaV1.InferInput<TSchema>> => ({
-    serialize: (value: StandardSchemaV1.InferInput<TSchema>) => {
+export const schema = <S extends StandardSchemaV1>(
+    schema: StandardSchemaV1.InferInput<S> extends SchemaSerializable ? S : never,
+): Serializer<StandardSchemaV1.InferInput<S>> => ({
+    serialize: (value: StandardSchemaV1.InferInput<S>) => {
         try {
             return ok(enhancedJsonStringify(value))
         } catch {
