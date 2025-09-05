@@ -473,6 +473,20 @@ describe("async result utilities", async () => {
                     SyntaxError,
                 )
             })
+
+            it("should protect from synchronously thrown errors in the promise creation function", async () => {
+                const synchronouslyThrowing = (): Promise<number> => {
+                    if ((() => true)()) {
+                        throw new Error()
+                    }
+
+                    return new Promise((resolve) => {
+                        resolve(1)
+                    })
+                }
+
+                await expect(tryAsync(synchronouslyThrowing)).resolves.toBeDefined()
+            })
         })
 
         describe("asyncSafeguard", () => {

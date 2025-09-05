@@ -1,5 +1,5 @@
 import { asyncCatchAndIgnore, identity } from "./internal/utils"
-import { err, ok, Result } from "./sync"
+import { err, ok, Result, trySync } from "./sync"
 
 export type ResultAsync<T, E> = {
     async: true
@@ -230,7 +230,14 @@ export const safeAsyncFn =
         }
     }
 
-export const tryAsync = <const T>(fn: () => Promise<T>) => fromPromise(fn(), identity)
+export const tryAsync = <const T>(fn: () => Promise<T>): ResultAsync<T, unknown> => {
+    const promise = trySync(fn)
+    if (!promise.success) {
+        return errAsync(promise.error)
+    }
+
+    return fromPromise(promise.value, identity)
+}
 
 export const asyncSafeguard =
     <A extends readonly unknown[], const T>(fn: (...args: A) => Promise<T>) =>
