@@ -4,22 +4,18 @@ import { identity, syncCatchAndIgnore } from "./internal/utils"
 
 export interface $Result<T, E> {
     async: false
-    map: <const M>(mapper: (value: T) => M) => Result<M, E>
-    mapErr: <const M>(mapper: (error: E) => M) => Result<T, M>
-    asyncMap: <const M>(mapper: (value: T) => Promise<M>) => ResultAsync<M, E>
-    bind: <const BT, const BE>(binder: (value: T) => Result<BT, BE>) => Result<BT, E | BE>
-    bindErr: <const BT, const BE>(binder: (error: E) => Result<BT, BE>) => Result<T | BT, BE>
+    map: <const M>(fn: (value: T) => M) => Result<M, E>
+    mapErr: <const M>(fn: (error: E) => M) => Result<T, M>
+    asyncMap: <const M>(fn: (value: T) => Promise<M>) => ResultAsync<M, E>
+    bind: <const BT, const BE>(fn: (value: T) => Result<BT, BE>) => Result<BT, E | BE>
+    bindErr: <const BT, const BE>(fn: (error: E) => Result<BT, BE>) => Result<T | BT, BE>
     asyncBind: <const BT, const BE>(
-        asyncBinder: (value: T) => Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
+        fn: (value: T) => Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
     ) => ResultAsync<BT, E | BE>
-    tap: (effect: (value: T) => unknown) => Result<T, E>
-    tapErr: (effect: (error: E) => unknown) => Result<T, E>
-    through: <const EE>(effect: (value: T) => Result<unknown, EE>) => Result<T, E | EE>
-    asyncThrough: <const EE>(
-        effect: (value: T) => Promise<Result<unknown, EE>> | ResultAsync<unknown, EE>,
-    ) => ResultAsync<T, E | EE>
+    tap: (fn: (value: T) => unknown) => Result<T, E>
+    tapErr: (fn: (error: E) => unknown) => Result<T, E>
     unwrapOr: <const O>(value: O) => T | O
-    unwrapOrFrom: <const O>(from: (error: E) => O) => T | O
+    unwrapOrFrom: <const O>(fn: (error: E) => O) => T | O
     dangerouslyUnwrap: () => T
     dangerouslyUnwrapErr: () => E
 }
@@ -44,22 +40,17 @@ export const ok = <const T>(value: T): Ok<T, never> => {
         async: false,
         success: true,
         value,
-        map: (mapper) => ok(mapper(value)),
+        map: (fn) => ok(fn(value)),
         mapErr: self,
-        asyncMap: (mapper) => fromSafePromise(mapper(value)),
+        asyncMap: (fn) => fromSafePromise(fn(value)),
         bind: (binder) => binder(value),
         bindErr: self,
-        asyncBind: (binder) => asyncFn(binder)(value),
-        tap: (effect) => {
-            syncCatchAndIgnore(() => effect(value))
+        asyncBind: (fn) => asyncFn(fn)(value),
+        tap: (fn) => {
+            syncCatchAndIgnore(() => fn(value))
             return ok(value)
         },
         tapErr: self,
-        through: (effect) => {
-            const effectResult = effect(value)
-            return effectResult.success ? ok(value) : err(effectResult.error)
-        },
-        asyncThrough: (effect) => asyncFn(effect)(value).map(extract),
         unwrapOr: extract,
         unwrapOrFrom: extract,
         dangerouslyUnwrap: extract,
@@ -78,18 +69,16 @@ export const err = <const E>(error: E): Err<never, E> => {
         success: false,
         error,
         map: self,
-        mapErr: (mapper) => err(mapper(error)),
+        mapErr: (fn) => err(fn(error)),
         asyncMap: asyncSelf,
         bind: self,
         bindErr: apply,
         asyncBind: asyncSelf,
         tap: self,
-        tapErr: (effect) => {
-            syncCatchAndIgnore(() => effect(error))
+        tapErr: (fn) => {
+            syncCatchAndIgnore(() => fn(error))
             return err(error)
         },
-        through: self,
-        asyncThrough: asyncSelf,
         unwrapOr: identity,
         unwrapOrFrom: apply,
         dangerouslyUnwrap: throwErrorUnwrapError,

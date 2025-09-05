@@ -264,64 +264,6 @@ describe("async result", () => {
                 await expectNoOriginalValuesChange()
             })
         })
-
-        describe("through", () => {
-            const toOkValue = 1
-            const setMutableToOk = (): ResultAsync<null, string> => {
-                mutable = toOkValue
-                return okAsync(null)
-            }
-
-            const toErrValue = 2
-            const setMutableToErr = (): ResultAsync<string, null> => {
-                mutable = toErrValue
-                return errAsync(null)
-            }
-
-            it("should run an ok-returning effect on an ok value and leave it unchanged", async () => {
-                for (const okResult of okResults) {
-                    expect(mutable).toBe(0)
-
-                    const through = await okResult.through(setMutableToOk)
-
-                    expect(mutable).toBe(toOkValue)
-                    expectResultValuesEqual(await okResult, through)
-
-                    resetMutable()
-                }
-            })
-            it("should run an error-returning effect on an ok value and return the effect's error value", async () => {
-                for (const okResult of okResults) {
-                    expect(mutable).toBe(0)
-
-                    const through = await okResult.through(setMutableToErr)
-
-                    expect(mutable).toBe(toErrValue)
-                    expect(through.dangerouslyUnwrapErr()).toBe(null)
-
-                    resetMutable()
-                }
-            })
-
-            it("should not run the effect on an err value and leave it unchanged", async () => {
-                for (const errResult of errResults) {
-                    const through1 = await errResult.through(setMutableToOk)
-                    const through2 = await errResult.through(setMutableToErr)
-
-                    expect(mutable).toBe(0)
-                    expectResultValuesEqual(await errResult, through1)
-                    expectResultValuesEqual(await errResult, through2)
-                }
-            })
-
-            it("should leave the original result unchanged", async () => {
-                for (const result of allResults) {
-                    void (await result.through(setMutableToOk))
-                }
-
-                await expectNoOriginalValuesChange()
-            })
-        })
     }
 
     describe("unwrapOr", () => {

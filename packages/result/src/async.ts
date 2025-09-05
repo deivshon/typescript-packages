@@ -7,21 +7,18 @@ export type ResultAsync<T, E> = {
         onFulfilled?: (value: Result<T, E>) => F | PromiseLike<F>,
         onRejected?: (error: unknown) => R | PromiseLike<R>,
     ) => Promise<F | R>
-    map: <const M>(mapper: (value: T) => M | Promise<M>) => ResultAsync<M, E>
-    mapErr: <const M>(mapper: (error: E) => M | Promise<M>) => ResultAsync<T, M>
+    map: <const M>(fn: (value: T) => M | Promise<M>) => ResultAsync<M, E>
+    mapErr: <const M>(fn: (error: E) => M | Promise<M>) => ResultAsync<T, M>
     bind: <const BT, const BE>(
-        binder: (value: T) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
+        fn: (value: T) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
     ) => ResultAsync<BT, E | BE>
     bindErr: <const BT, const BE>(
-        binder: (error: E) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
+        fn: (error: E) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
     ) => ResultAsync<T | BT, BE>
-    tap: (effect: (value: T) => unknown) => ResultAsync<T, E>
-    tapErr: (effect: (error: E) => unknown) => ResultAsync<T, E>
-    through: <const EE>(
-        effect: (value: T) => Result<unknown, EE> | Promise<Result<unknown, EE>> | ResultAsync<unknown, EE>,
-    ) => ResultAsync<T, E | EE>
+    tap: (fn: (value: T) => unknown) => ResultAsync<T, E>
+    tapErr: (fn: (error: E) => unknown) => ResultAsync<T, E>
     unwrapOr: <const O>(value: O) => Promise<T | O>
-    unwrapOrFrom: <const O>(from: (error: E) => O) => Promise<T | O>
+    unwrapOrFrom: <const O>(fn: (error: E) => O) => Promise<T | O>
     dangerouslyUnwrap: () => Promise<T>
     dangerouslyUnwrapErr: () => Promise<E>
 }
@@ -39,53 +36,42 @@ export const fromResultPromise = <const T, const E, const HE>(
             fromSafeResultPromise(
                 handled.then(async (result) => (result.success ? ok(await mapper(result.value)) : err(result.error))),
             ),
-        mapErr: (mapper) =>
+        mapErr: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? ok(result.value) : err(await mapper(result.error)))),
+                handled.then(async (result) => (result.success ? ok(result.value) : err(await fn(result.error)))),
             ),
-        bind: (binder) =>
+        bind: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? await binder(result.value) : err(result.error))),
+                handled.then(async (result) => (result.success ? await fn(result.value) : err(result.error))),
             ),
-        bindErr: (binder) =>
+        bindErr: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? ok(result.value) : await binder(result.error))),
+                handled.then(async (result) => (result.success ? ok(result.value) : await fn(result.error))),
             ),
-        tap: (effect) =>
+        tap: (fn) =>
             fromSafeResultPromise(
                 handled.then(async (result) => {
                     if (!result.success) {
                         return err(result.error)
                     }
 
-                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.value)))
+                    await asyncCatchAndIgnore(() => Promise.resolve(fn(result.value)))
                     return ok(result.value)
                 }),
             ),
-        tapErr: (effect) =>
+        tapErr: (fn) =>
             fromSafeResultPromise(
                 handled.then(async (result) => {
                     if (result.success) {
                         return ok(result.value)
                     }
 
-                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.error)))
+                    await asyncCatchAndIgnore(() => Promise.resolve(fn(result.error)))
                     return err(result.error)
                 }),
             ),
-        through: (effect) =>
-            fromSafeResultPromise(
-                handled.then(async (result) => {
-                    if (!result.success) {
-                        return err(result.error)
-                    }
-
-                    const effectResult = await effect(result.value)
-                    return effectResult.success ? ok(result.value) : err(effectResult.error)
-                }),
-            ),
         unwrapOr: (or) => handled.then((result) => result.unwrapOr(or)),
-        unwrapOrFrom: (from) => handled.then((result) => result.unwrapOrFrom(from)),
+        unwrapOrFrom: (fn) => handled.then((result) => result.unwrapOrFrom(fn)),
         dangerouslyUnwrap: () => handled.then((result) => result.dangerouslyUnwrap()),
         dangerouslyUnwrapErr: () => handled.then((result) => result.dangerouslyUnwrapErr()),
     }
@@ -97,7 +83,6 @@ export const fromSafeResultPromise = <const T, const E>(promise: Promise<Result<
     })
 
 export const okAsync = <const T>(value: T): ResultAsync<T, never> => fromSafeResultPromise(Promise.resolve(ok(value)))
-
 export const errAsync = <const E>(error: E): ResultAsync<never, E> => fromSafeResultPromise(Promise.resolve(err(error)))
 
 export const fromPromise = <const T, const E>(
@@ -112,29 +97,27 @@ export const fromPromise = <const T, const E>(
     return {
         async: true,
         then: (onFulfilled, onRejected) => handled.then(onFulfilled, onRejected),
-        map: (mapper) =>
+        map: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? ok(await mapper(result.value)) : err(result.error))),
+                handled.then(async (result) => (result.success ? ok(await fn(result.value)) : err(result.error))),
             ),
-        mapErr: (mapper) =>
+        mapErr: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? ok(result.value) : err(await mapper(result.error)))),
+                handled.then(async (result) => (result.success ? ok(result.value) : err(await fn(result.error)))),
             ),
-        bind: <const BT, const BE>(
-            binder: (value: T) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
-        ) =>
+        bind: <const BT, const BE>(fn: (value: T) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>) =>
             fromSafeResultPromise<BT, E | BE>(
                 handled.then(async (result) => {
                     if (!result.success) {
                         return err(result.error)
                     }
 
-                    const normalized = await binder(result.value)
+                    const normalized = await fn(result.value)
                     return normalized
                 }),
             ),
         bindErr: <const BT, const BE>(
-            binder: (error: E) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
+            fn: (error: E) => Result<BT, BE> | Promise<Result<BT, BE>> | ResultAsync<BT, BE>,
         ) =>
             fromSafeResultPromise<T | BT, BE>(
                 handled.then(async (result) => {
@@ -142,47 +125,34 @@ export const fromPromise = <const T, const E>(
                         return ok(result.value)
                     }
 
-                    const normalized = await binder(result.error)
+                    const normalized = await fn(result.error)
                     return normalized
                 }),
             ),
-        tap: (effect) =>
+        tap: (fn) =>
             fromSafeResultPromise(
                 handled.then(async (result) => {
                     if (!result.success) {
                         return err(result.error)
                     }
 
-                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.value)))
+                    await asyncCatchAndIgnore(() => Promise.resolve(fn(result.value)))
                     return ok(result.value)
                 }),
             ),
-        tapErr: (effect) =>
+        tapErr: (fn) =>
             fromSafeResultPromise(
                 handled.then(async (result) => {
                     if (result.success) {
                         return ok(result.value)
                     }
 
-                    await asyncCatchAndIgnore(() => Promise.resolve(effect(result.error)))
+                    await asyncCatchAndIgnore(() => Promise.resolve(fn(result.error)))
                     return err(result.error)
                 }),
             ),
-        through: <const EE>(
-            effect: (value: T) => Result<unknown, EE> | Promise<Result<unknown, EE>> | ResultAsync<unknown, EE>,
-        ) =>
-            fromSafeResultPromise<T, E | EE>(
-                handled.then(async (result) => {
-                    if (!result.success) {
-                        return err(result.error)
-                    }
-
-                    const effectResult = await effect(result.value)
-                    return effectResult.success ? ok(result.value) : err(effectResult.error)
-                }),
-            ),
         unwrapOr: (or) => handled.then((result) => result.unwrapOr(or)),
-        unwrapOrFrom: (from) => handled.then((result) => result.unwrapOrFrom(from)),
+        unwrapOrFrom: (fn) => handled.then((result) => result.unwrapOrFrom(fn)),
         dangerouslyUnwrap: () => handled.then((result) => result.dangerouslyUnwrap()),
         dangerouslyUnwrapErr: () => handled.then((result) => result.dangerouslyUnwrapErr()),
     }
