@@ -32,9 +32,9 @@ export const fromResultPromise = <const T, const E, const HE>(
     return {
         async: true,
         then: (onFulfilled, onRejected) => handled.then(onFulfilled, onRejected),
-        map: (mapper) =>
+        map: (fn) =>
             fromSafeResultPromise(
-                handled.then(async (result) => (result.success ? ok(await mapper(result.value)) : err(result.error))),
+                handled.then(async (result) => (result.success ? ok(await fn(result.value)) : err(result.error))),
             ),
         mapErr: (fn) =>
             fromSafeResultPromise(

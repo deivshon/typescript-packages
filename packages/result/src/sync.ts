@@ -43,7 +43,7 @@ export const ok = <const T>(value: T): Ok<T, never> => {
         map: (fn) => ok(fn(value)),
         mapErr: self,
         asyncMap: (fn) => fromSafePromise(fn(value)),
-        bind: (binder) => binder(value),
+        bind: (fn) => fn(value),
         bindErr: self,
         asyncBind: (fn) => asyncFn(fn)(value),
         tap: (fn) => {
