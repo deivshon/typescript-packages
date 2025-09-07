@@ -1,36 +1,40 @@
 import { AsyncNamedStorage } from "./storage"
 import { valueFromStorage } from "./utils"
 
-// TODO error handling
 export const idb: AsyncNamedStorage = {
     async: true,
     type: "named",
     get: async (name) => {
         const database = await getIndexedDbDatabase()
+        if (!database) {
+            return {}
+        }
+
         const request: IDBRequest<unknown> = database
             .transaction(objectStoreName, "readonly")
             .objectStore(objectStoreName)
             .get(name)
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             request.onsuccess = () => {
                 resolve(valueFromStorage(request.result))
             }
             request.onerror = () => {
-                reject(new Error())
+                resolve({})
             }
         })
     },
     set: async (name, value) => {
         const database = await getIndexedDbDatabase()
+        if (!database) {
+            return
+        }
+
         const request = database.transaction(objectStoreName, "readwrite").objectStore(objectStoreName).put(value, name)
 
-        return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
+        return new Promise((resolve) => {
+            request.onsuccess = request.onerror = () => {
                 resolve()
-            }
-            request.onerror = () => {
-                reject(new Error())
             }
         })
     },
@@ -41,7 +45,7 @@ const objectStoreName = "root"
 const getIndexedDbDatabase = (() => {
     let database: IDBDatabase | null = null
 
-    return (): Promise<IDBDatabase> => {
+    return (): Promise<IDBDatabase | null> => {
         if (database) {
             return Promise.resolve(database)
         }
@@ -52,13 +56,13 @@ const getIndexedDbDatabase = (() => {
             request.result.createObjectStore(objectStoreName)
         }
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             request.onsuccess = () => {
                 database = request.result
                 resolve(database)
             }
             request.onerror = () => {
-                reject(new Error())
+                resolve(null)
             }
         })
     }
