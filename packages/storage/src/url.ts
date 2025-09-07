@@ -1,4 +1,4 @@
-import { GlobalStorage, GlobalStorageInstance } from "./storage"
+import { SyncGlobalStorage, SyncGlobalStorageInstance } from "./storage"
 
 type UrlStateControls = {
     get: () => Array<[string, string]>
@@ -47,8 +47,8 @@ const parseUrlStorageOptions = (options: Partial<Record<never, unknown>>): Requi
     push: "push" in options && typeof options.push === "boolean" ? options.push : false,
 })
 
-const $url: GlobalStorage = (() => {
-    const get: GlobalStorage["get"] = () => {
+const $url: SyncGlobalStorage = (() => {
+    const get: SyncGlobalStorage["get"] = () => {
         const entries = urlStateControls
             ? urlStateControls.get()
             : Array.from(new URLSearchParams(window.location.search))
@@ -59,7 +59,7 @@ const $url: GlobalStorage = (() => {
         }, {})
     }
 
-    const set: GlobalStorage["set"] = (value, options) => {
+    const set: SyncGlobalStorage["set"] = (value, options) => {
         if (!urlStateControls) {
             return
         }
@@ -100,7 +100,7 @@ const $url: GlobalStorage = (() => {
         urlStateControls.set(entries, { replace })
     }
 
-    const subscribe: GlobalStorage["subscribe"] = (callback) => {
+    const subscribe: SyncGlobalStorage["subscribe"] = (callback) => {
         const cleanup = sync.listen(callback)
 
         return () => {
@@ -109,6 +109,7 @@ const $url: GlobalStorage = (() => {
     }
 
     return {
+        async: false,
         type: "global",
         get,
         set,
@@ -116,7 +117,7 @@ const $url: GlobalStorage = (() => {
     }
 })()
 
-export const url = (options: UrlStorageOptions = {}): GlobalStorageInstance => ({
+export const url = (options: UrlStorageOptions = {}): SyncGlobalStorageInstance => ({
     storage: $url,
     options,
 })

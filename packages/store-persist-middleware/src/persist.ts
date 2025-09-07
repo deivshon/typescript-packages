@@ -1,5 +1,5 @@
 import { Serializer } from "@deivshon/serialization"
-import { GlobalStorage, Storage, StorageInstance } from "@deivshon/storage"
+import { SyncGlobalStorage, SyncStorage, SyncStorageInstance } from "@deivshon/storage"
 import { Middleware, Store } from "@deivshon/store"
 import { NoFunctions } from "@deivshon/types-toolkit"
 
@@ -8,22 +8,22 @@ export const persist = <TState extends Record<string, unknown>>(
     persistence: {
         [TKey in keyof NoFunctions<TState>]?: [
             ((initial: TState[TKey]) => Serializer<TState[TKey]>) | Serializer<TState[TKey]>,
-            StorageInstance,
+            SyncStorageInstance,
         ]
     },
 ): Middleware<TState> => {
     const shouldSync = Symbol()
 
     let initialState: TState | null = null
-    const storageSubscriptions = new Map<GlobalStorage, { unsubscribe: () => void }>()
+    const storageSubscriptions = new Map<SyncGlobalStorage, { unsubscribe: () => void }>()
 
-    const getFromStorage = (opts: { storage: "all" | Storage }) => {
+    const getFromStorage = (opts: { storage: "all" | SyncStorage }) => {
         const values: Partial<TState> = {}
         if (!initialState) {
             return values
         }
 
-        const storedCache = new Map<Storage, Partial<Record<string, string>>>()
+        const storedCache = new Map<SyncStorage, Partial<Record<string, string>>>()
         for (const key in persistence) {
             if (!persistence[key]) {
                 continue
@@ -58,10 +58,10 @@ export const persist = <TState extends Record<string, unknown>>(
 
     const setToStorage = (
         values: Map<
-            Storage,
+            SyncStorage,
             {
                 update: Partial<Record<string, string>>
-                options: Partial<Record<string, StorageInstance["options"]>>
+                options: Partial<Record<string, SyncStorageInstance["options"]>>
             }
         >,
     ): void => {
@@ -87,7 +87,7 @@ export const persist = <TState extends Record<string, unknown>>(
         }
     }
 
-    const onStorageUpdate = (storage: Storage, set: Store<TState, Record<string, unknown>>["set"]) => () => {
+    const onStorageUpdate = (storage: SyncStorage, set: Store<TState, Record<string, unknown>>["set"]) => () => {
         const update = (() => {
             const values = getFromStorage({ storage })
             if (!initialState) {
@@ -138,10 +138,10 @@ export const persist = <TState extends Record<string, unknown>>(
             }
 
             const values = new Map<
-                Storage,
+                SyncStorage,
                 {
                     update: Partial<Record<string, string>>
-                    options: Partial<Record<string, StorageInstance["options"]>>
+                    options: Partial<Record<string, SyncStorageInstance["options"]>>
                 }
             >()
 

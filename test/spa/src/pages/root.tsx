@@ -1,4 +1,6 @@
 import { shallowEq } from "@deivshon/react-store"
+import { idb } from "@deivshon/storage"
+import * as React from "react"
 import { Link, useSearchParams } from "react-router"
 import { useGlobalStore } from "../lib/global-store"
 import { usePersistedStore } from "../lib/persist-store"
@@ -42,6 +44,7 @@ export const RootPage = () => {
             </div>
             <RootPageNumberSet />
             <RootPageNumberMap />
+            <RootPageIndexedDb />
         </div>
     )
 }
@@ -222,6 +225,56 @@ const RootPageNumberMap = () => {
             <button type="button" onClick={randomizeNumberMap} style={{ width: "fit-content" }}>
                 Randomize number map
             </button>
+        </div>
+    )
+}
+
+const RootPageIndexedDb = () => {
+    const storageKey = "root-random-numbers"
+    const [a, setA] = React.useState<string>("")
+    const [b, setB] = React.useState<string>("")
+    const [c, setC] = React.useState<string>("")
+
+    const onWrite = async () => {
+        const na = String(Math.floor(Math.random() * 100000))
+        const nb = String(Math.floor(Math.random() * 100000))
+        const nc = String(Math.floor(Math.random() * 100000))
+
+        try {
+            await idb.set(storageKey, { a: na, b: nb, c: nc }, {})
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const onRead = async () => {
+        try {
+            const value = await idb.get(storageKey)
+            setA(value.a ?? "")
+            setB(value.b ?? "")
+            setC(value.c ?? "")
+        } catch (err) {
+            setA("")
+            setB("")
+            setC("")
+        }
+    }
+
+    return (
+        <div style={{ marginTop: "1rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                <button type="button" onClick={onWrite}>
+                    Write
+                </button>
+                <button type="button" onClick={onRead}>
+                    Read
+                </button>
+            </div>
+            <ul>
+                <li>a: {a}</li>
+                <li>b: {b}</li>
+                <li>c: {c}</li>
+            </ul>
         </div>
     )
 }

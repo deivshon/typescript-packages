@@ -1,6 +1,7 @@
-import { NamedStorage, NamedStorageInstance } from "./storage"
+import { NamedStorage, SyncNamedStorage, SyncNamedStorageInstance } from "./storage"
 
-const fromNative = (native: globalThis.Storage): NamedStorage => ({
+const fromNative = (native: globalThis.Storage): SyncNamedStorage => ({
+    async: false,
     type: "named",
     get: (name) => {
         const stored = native.getItem(name)
@@ -34,13 +35,13 @@ const fromNative = (native: globalThis.Storage): NamedStorage => ({
 })
 
 const $local: NamedStorage = fromNative(localStorage)
-export const local = (): NamedStorageInstance => ({
+export const local = (): SyncNamedStorageInstance => ({
     storage: $local,
     options: {},
 })
 
 const $session: NamedStorage = fromNative(sessionStorage)
-export const session = (): NamedStorageInstance => ({
+export const session = (): SyncNamedStorageInstance => ({
     storage: $session,
     options: {},
 })
