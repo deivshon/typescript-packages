@@ -1,5 +1,4 @@
 export { idb } from "./indexed-db"
-export { local, session } from "./native"
 export {
     type AsyncGlobalStorage,
     type AsyncGlobalStorageInstance,
@@ -21,3 +20,4 @@ export {
     type SyncStorageInstance,
 } from "./storage"
 export { setUrlStorageControls, syncUrlStorage, url, type UrlStorageOptions } from "./url"
+export { local, session } from "./web-storage"
