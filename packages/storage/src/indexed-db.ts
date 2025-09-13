@@ -1,7 +1,7 @@
-import { AsyncNamedStorage } from "./storage"
+import { AsyncNamedStorage, AsyncNamedStorageInstance } from "./storage"
 import { valueFromStorage } from "./utils"
 
-export const idb: AsyncNamedStorage = {
+const $idb: AsyncNamedStorage = {
     async: true,
     type: "named",
     get: async (name) => {
@@ -24,7 +24,7 @@ export const idb: AsyncNamedStorage = {
             }
         })
     },
-    set: async (name, value) => {
+    replace: async (name, value) => {
         const database = await getIndexedDbDatabase()
         if (!database) {
             return
@@ -38,7 +38,16 @@ export const idb: AsyncNamedStorage = {
             }
         })
     },
+    update: async (name, value, options) => {
+        const current = await $idb.get(name)
+        const updated = { ...current, ...value }
+        return $idb.replace(name, updated, options)
+    },
 }
+export const idb = (): AsyncNamedStorageInstance => ({
+    storage: $idb,
+    options: {},
+})
 
 const databaseName = "@deivshon/storage"
 const objectStoreName = "root"

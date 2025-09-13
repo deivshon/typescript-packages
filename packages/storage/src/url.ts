@@ -1,13 +1,11 @@
-import { SyncGlobalStorage, SyncGlobalStorageInstance } from "./storage"
+import { StorageContents, StorageMutationOptions, SyncGlobalStorage, SyncGlobalStorageInstance } from "./storage"
 
+type UrlStateSetOptions = {
+    replace: boolean
+}
 type UrlStateControls = {
     get: () => Array<[string, string]>
-    set: (
-        entries: Array<[string, string]>,
-        opts: {
-            replace: boolean
-        },
-    ) => void
+    set: (entries: Array<[string, string]>, options: UrlStateSetOptions) => void
 }
 
 let urlStateControls: UrlStateControls | null = null
@@ -59,20 +57,12 @@ const $url: SyncGlobalStorage = (() => {
         }, {})
     }
 
-    const set: SyncGlobalStorage["set"] = (value, options) => {
-        if (!urlStateControls) {
-            return
-        }
-
-        const current = get()
-
+    const optionsFromMutation = (value: StorageContents, options: StorageMutationOptions): UrlStateSetOptions => {
         let replace = true
         for (const key in value) {
             if (typeof key !== "string" || typeof value[key] !== "string") {
                 continue
             }
-
-            current[key] = value[key]
 
             if (!(key in options)) {
                 continue
@@ -84,35 +74,41 @@ const $url: SyncGlobalStorage = (() => {
             }
         }
 
-        const entries = (() => {
-            const result: Array<[string, string]> = []
-            for (const [key, value] of Object.entries(current)) {
-                if (!value) {
-                    continue
-                }
-
-                result.push([key, value])
+        return {
+            replace,
+        }
+    }
+    const entriesFromContents = (value: StorageContents): Array<[string, string]> => {
+        const result: Array<[string, string]> = []
+        for (const [key, val] of Object.entries(value)) {
+            if (!val) {
+                continue
             }
 
-            return result
-        })()
+            result.push([key, val])
+        }
 
+        return result
+    }
+
+    const mutate = (mode: "replace" | "update") => (value: StorageContents, options: StorageMutationOptions) => {
+        if (!urlStateControls) {
+            return
+        }
+
+        const { replace } = optionsFromMutation(value, options)
+        const entries = entriesFromContents({ ...(mode === "update" ? get() : {}), ...value })
         urlStateControls.set(entries, { replace })
     }
 
-    const subscribe: SyncGlobalStorage["subscribe"] = (callback) => {
-        const cleanup = sync.listen(callback)
-
-        return () => {
-            cleanup()
-        }
-    }
+    const subscribe: SyncGlobalStorage["subscribe"] = sync.listen
 
     return {
         async: false,
         type: "global",
         get,
-        set,
+        replace: mutate("replace"),
+        update: mutate("update"),
         subscribe,
     }
 })()

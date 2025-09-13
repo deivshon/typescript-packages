@@ -1,31 +1,31 @@
+export type StorageContents = Partial<Record<string, string>>
+export type StorageMutationOptions = Partial<Record<PropertyKey, Partial<Record<PropertyKey, unknown>>>>
+export type StorageOptions = Partial<Record<PropertyKey, unknown>>
+
 export type SyncNamedStorage = {
     async: false
     type: "named"
-    get: (name: string) => Partial<Record<string, string>>
-    set: (
-        name: string,
-        value: Partial<Record<string, string>>,
-        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
-    ) => void
+    get: (name: string) => StorageContents
+    replace: (name: string, value: StorageContents, options: StorageMutationOptions) => void
+    update: (name: string, value: StorageContents, options: StorageMutationOptions) => void
+    subscribe?: (callback: () => void) => () => void
 }
 export type SyncNamedStorageInstance = {
     storage: SyncNamedStorage
-    options: Partial<Record<PropertyKey, unknown>>
+    options: StorageOptions
 }
 
 export type AsyncNamedStorage = {
     async: true
     type: "named"
-    get: (name: string) => Promise<Partial<Record<string, string>>>
-    set: (
-        name: string,
-        value: Partial<Record<string, string>>,
-        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
-    ) => Promise<void>
+    get: (name: string) => Promise<StorageContents>
+    replace: (name: string, value: StorageContents, options: StorageMutationOptions) => Promise<void>
+    update: (name: string, value: StorageContents, options: StorageMutationOptions) => Promise<void>
+    subscribe?: (callback: () => void) => () => void
 }
 export type AsyncNamedStorageInstance = {
     storage: AsyncNamedStorage
-    options: Partial<Record<PropertyKey, unknown>>
+    options: StorageOptions
 }
 
 export type NamedStorage = SyncNamedStorage | AsyncNamedStorage
@@ -34,30 +34,27 @@ export type NamedStorageInstance = SyncNamedStorageInstance | AsyncNamedStorageI
 export type SyncGlobalStorage = {
     async: false
     type: "global"
-    get: () => Partial<Record<string, string>>
-    set: (
-        value: Partial<Record<string, string>>,
-        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
-    ) => void
+    get: () => StorageContents
+    replace: (value: StorageContents, options: StorageMutationOptions) => void
+    update: (value: StorageContents, options: StorageMutationOptions) => void
     subscribe?: (callback: () => void) => () => void
 }
 export type SyncGlobalStorageInstance = {
     storage: SyncGlobalStorage
-    options: Partial<Record<PropertyKey, unknown>>
+    options: StorageOptions
 }
 
 export type AsyncGlobalStorage = {
     async: true
     type: "global"
-    get: () => Promise<Partial<Record<string, string>>>
-    set: (
-        value: Partial<Record<string, string>>,
-        options: Partial<Record<string, Partial<Record<PropertyKey, unknown>>>>,
-    ) => Promise<void>
+    get: () => Promise<StorageContents>
+    replace: (value: StorageContents, options: StorageMutationOptions) => Promise<void>
+    update: (value: StorageContents, options: StorageMutationOptions) => Promise<void>
+    subscribe?: (callback: () => void) => () => void
 }
 export type AsyncGlobalStorageInstance = {
     storage: AsyncGlobalStorage
-    options: Partial<Record<PropertyKey, unknown>>
+    options: StorageOptions
 }
 
 export type GlobalStorage = SyncGlobalStorage | AsyncGlobalStorage

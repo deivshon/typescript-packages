@@ -1,5 +1,5 @@
 import { Serializer } from "@deivshon/serialization"
-import { SyncGlobalStorage, SyncStorage, SyncStorageInstance } from "@deivshon/storage"
+import { AsyncStorage, Storage, StorageInstance, SyncStorage } from "@deivshon/storage"
 import { Middleware, Store } from "@deivshon/store"
 import { NoFunctions } from "@deivshon/types-toolkit"
 
@@ -8,108 +8,148 @@ export const persist = <TState extends Record<string, unknown>>(
     persistence: {
         [TKey in keyof NoFunctions<TState>]?: [
             ((initial: TState[TKey]) => Serializer<TState[TKey]>) | Serializer<TState[TKey]>,
-            SyncStorageInstance,
+            StorageInstance,
         ]
     },
 ): Middleware<TState> => {
     const shouldSync = Symbol()
 
     let initialState: TState | null = null
-    const storageSubscriptions = new Map<SyncGlobalStorage, { unsubscribe: () => void }>()
+    let set: Store<TState, Record<string, unknown>>["set"] | null = null
+    const storageSubscriptions = new Map<Storage, { unsubscribe: () => void }>()
 
-    const getFromStorage = (opts: { storage: "all" | SyncStorage }) => {
-        const values: Partial<TState> = {}
+    const getFromStorage = (opts: {
+        storage: "all" | Storage | ((storage: Storage) => boolean)
+    }): { syncValues: Partial<TState>; asyncValues: Promise<Partial<TState>> } => {
+        const syncValues: Partial<TState> = {}
+        const asyncValues: Array<Promise<Partial<TState>>> = []
         if (!initialState) {
-            return values
+            return { syncValues, asyncValues: Promise.resolve({}) }
         }
 
-        const storedCache = new Map<SyncStorage, Partial<Record<string, string>>>()
+        const skipStorage = (storage: Storage): boolean => {
+            if (opts.storage === "all") {
+                return false
+            } else if (opts.storage instanceof Function) {
+                return !opts.storage(storage)
+            } else {
+                return storage !== opts.storage
+            }
+        }
+
+        const syncStoredCache = new Map<SyncStorage, Partial<Record<string, string>>>()
+        const asyncStoredCache = new Map<AsyncStorage, Promise<Partial<Record<string, string>>>>()
         for (const key in persistence) {
             if (!persistence[key]) {
                 continue
             }
 
             const [serializer, { storage }] = persistence[key]
-            if (opts.storage !== "all" && storage !== opts.storage) {
+            if (skipStorage(storage)) {
                 continue
             }
 
-            const stored = (() => {
-                const cached = storedCache.get(storage)
-                if (cached) {
-                    return cached
+            const stored =
+                (storage.async ? asyncStoredCache.get(storage) : syncStoredCache.get(storage)) ??
+                (() => {
+                    if (storage.async) {
+                        const retrieval = storage.get(name)
+                        asyncStoredCache.set(storage, retrieval)
+                        return retrieval
+                    } else {
+                        const retrieved = storage.get(name)
+                        syncStoredCache.set(storage, retrieved)
+                        return retrieved
+                    }
+                })()
+
+            if (stored instanceof Promise) {
+                const computed = stored.then((values) => {
+                    if (typeof values[key] !== "string" || !initialState) {
+                        return {}
+                    }
+
+                    const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(values[key])
+
+                    const result: Partial<TState> = {}
+                    result[key] = deserialized.success ? deserialized.value : initialState[key]
+
+                    return result
+                })
+                asyncValues.push(computed)
+            } else {
+                if (typeof stored[key] !== "string") {
+                    continue
                 }
 
-                const retrieved = storage.get(name)
-                storedCache.set(storage, retrieved)
-
-                return retrieved
-            })()
-            if (!stored || typeof stored[key] !== "string") {
-                continue
+                const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(stored[key])
+                syncValues[key] = deserialized.success ? deserialized.value : initialState[key]
             }
-
-            const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(stored[key])
-            values[key] = deserialized.success ? deserialized.value : initialState[key]
         }
 
-        return values
+        return {
+            syncValues,
+            asyncValues: Promise.all(asyncValues).then((values) =>
+                values.reduce((acc, current) => ({ ...acc, ...current }), {}),
+            ),
+        }
     }
 
     const setToStorage = (
         values: Map<
-            SyncStorage,
+            Storage,
             {
                 update: Partial<Record<string, string>>
-                options: Partial<Record<string, SyncStorageInstance["options"]>>
+                options: Partial<Record<string, StorageInstance["options"]>>
             }
         >,
     ): void => {
         for (const [storage, { update, options }] of values.entries()) {
             if (storage.type === "named") {
-                storage.set(
-                    name,
-                    {
-                        ...storage.get(name),
-                        ...update,
-                    },
-                    options,
-                )
+                void storage.update(name, update, options)
             } else {
-                storage.set(
-                    {
-                        ...storage.get(),
-                        ...update,
-                    },
-                    options,
-                )
+                void storage.update(update, options)
             }
         }
     }
 
-    const onStorageUpdate = (storage: SyncStorage, set: Store<TState, Record<string, unknown>>["set"]) => () => {
-        const update = (() => {
-            const values = getFromStorage({ storage })
+    const onStorageUpdate = (storage: Storage) => () => {
+        if (!set) {
+            return
+        }
+
+        const computeUpdate = (storageValues: Partial<TState>): Partial<TState> => {
             if (!initialState) {
-                return values
+                return storageValues
             }
 
+            const update = { ...storageValues }
             for (const key in persistence) {
-                if (key in values || !persistence[key] || persistence[key][1].storage !== storage) {
+                if (key in storageValues || !persistence[key] || persistence[key][1].storage !== storage) {
                     continue
                 }
 
-                values[key] = initialState[key]
+                update[key] = initialState[key]
             }
 
-            return values
-        })()
+            return update
+        }
 
-        set(update, { [shouldSync]: false })
+        if (storage.async) {
+            void getFromStorage({ storage }).asyncValues.then((storageValues) => {
+                const update = computeUpdate(storageValues)
+                set?.(update, { [shouldSync]: false })
+            })
+        } else {
+            const update = computeUpdate(getFromStorage({ storage }).syncValues)
+            set(update, { [shouldSync]: false })
+        }
     }
 
     return {
-        onInit: (_, set) => {
+        onInit: (_, baseSet) => {
+            set = baseSet
+
             for (const key in persistence) {
                 if (!persistence[key]) {
                     continue
@@ -120,16 +160,24 @@ export const persist = <TState extends Record<string, unknown>>(
                     continue
                 }
 
-                const unsubscribe = storage.subscribe(onStorageUpdate(storage, set))
+                const unsubscribe = storage.subscribe(onStorageUpdate(storage))
                 storageSubscriptions.set(storage, { unsubscribe })
             }
+
+            void getFromStorage({ storage: (storage) => storage.async }).asyncValues.then((values) => {
+                if (!set) {
+                    return
+                }
+
+                set(values, { [shouldSync]: false })
+            })
         },
         transformInitial: (state) => {
-            initialState = state
+            initialState ??= state
 
             return {
                 ...state,
-                ...getFromStorage({ storage: "all" }),
+                ...getFromStorage({ storage: "all" }).syncValues,
             }
         },
         onUpdate: (update, newState, meta) => {
@@ -138,10 +186,10 @@ export const persist = <TState extends Record<string, unknown>>(
             }
 
             const values = new Map<
-                SyncStorage,
+                Storage,
                 {
                     update: Partial<Record<string, string>>
-                    options: Partial<Record<string, SyncStorageInstance["options"]>>
+                    options: Partial<Record<string, StorageInstance["options"]>>
                 }
             >()
 

@@ -1,6 +1,6 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
 import { boolean, date, map, nullable, number, schema, set, string } from "@deivshon/serialization"
-import { local, session, url } from "@deivshon/storage"
+import { idb, local, session, url } from "@deivshon/storage"
 import { persist } from "@deivshon/store-persist-middleware"
 import { type } from "arktype"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
@@ -23,6 +23,10 @@ type PersistedStore = {
     url2: string
     url3: boolean
     url4: Date | null
+    idb1: number
+    idb2: string
+    idb3: boolean
+    idb4: Date | null
     profile: Profile
     movie: Movie | undefined | null
     numberSet: Set<number | null>
@@ -55,6 +59,10 @@ const persistedStore = createStore<PersistedStore>(
         url2: "0",
         url3: false,
         url4: new Date(0),
+        idb1: 0,
+        idb2: "0",
+        idb3: false,
+        idb4: new Date(0),
         profile: defaultProfile,
         movie: undefined,
         numberSet: new Set([1, 2, 3]),
@@ -94,6 +102,10 @@ const persistedStore = createStore<PersistedStore>(
             url2: [string, url()],
             url3: [boolean, url({ push: true })],
             url4: [nullable(date), url()],
+            idb1: [number, idb()],
+            idb2: [string, idb()],
+            idb3: [boolean, idb()],
+            idb4: [nullable(date), idb()],
             profile: [schema(profileSchema), local()],
             movie: [schema(movieSchema.or("null | undefined")), url()],
             numberSet: [set(schema(type("number | null"))), url()],
@@ -109,24 +121,28 @@ const random1 = (): Partial<PersistedStore> => ({
     local1: Math.floor(Math.random() * 100),
     session1: Math.floor(Math.random() * 100),
     url1: Math.floor(Math.random() * 100),
+    idb1: Math.floor(Math.random() * 100),
 })
 const random2 = (): Partial<PersistedStore> => ({
     memory2: String(Math.floor(Math.random() * 100)),
     local2: String(Math.floor(Math.random() * 100)),
     session2: String(Math.floor(Math.random() * 100)),
     url2: String(Math.floor(Math.random() * 100)),
+    idb2: String(Math.floor(Math.random() * 100)),
 })
 const random3 = (): Partial<PersistedStore> => ({
     memory3: Math.random() > 0.5,
     local3: Math.random() > 0.5,
     session3: Math.random() > 0.5,
     url3: Math.random() > 0.5,
+    idb3: Math.random() > 0.5,
 })
 const random4 = (): Partial<PersistedStore> => ({
     memory4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
     local4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
     session4: Math.random() > 0.9 ? new Date(NaN) : new Date(Math.floor(Math.random() * Date.now())),
     url4: Math.random() > 0.9 ? null : new Date(Math.floor(Math.random() * Date.now())),
+    idb4: Math.random() > 0.9 ? null : new Date(Math.floor(Math.random() * Date.now())),
 })
 const randomNonPrimitives = (): Partial<PersistedStore> => ({
     profile: makeRandomProfile(),
