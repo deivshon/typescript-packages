@@ -11,5 +11,5 @@ export {
     safeAsyncFn,
     tryAsync,
 } from "./async"
-export { UnwrapError } from "./errors"
+export { ResultUnwrapError } from "./errors"
 export { err, ok, Result, safeSyncFn, syncFn, syncSafeguard, trySync } from "./sync"

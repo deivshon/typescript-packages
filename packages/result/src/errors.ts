@@ -1,21 +1,18 @@
-export type UnwrapErrorKind = "value" | "error"
+export type ResultUnwrapErrorKind = "value" | "error"
 
-export class UnwrapError extends Error {
-    kind: UnwrapErrorKind
+export class ResultUnwrapError extends Error {
+    kind: ResultUnwrapErrorKind
 
-    constructor(kind: UnwrapErrorKind) {
+    constructor(kind: ResultUnwrapErrorKind) {
         super(`Tried unwrapping a${kind === "error" ? "n error" : " value"} but result did not have it`)
         this.name = "UnwrapError"
         this.kind = kind
     }
 }
 
-export const throwValueUnwrapError = () => {
-    throw new UnwrapError("value")
+export const throwValueResultUnwrapError = () => {
+    throw new ResultUnwrapError("value")
 }
-export const throwErrorUnwrapError = () => {
-    throw new UnwrapError("error")
+export const throwErrorResultUnwrapError = () => {
+    throw new ResultUnwrapError("error")
 }
-
-export const rejectWithValueUnwrapError = () => Promise.reject(new UnwrapError("value"))
-export const rejectWithErrorUnwrapError = () => Promise.reject(new UnwrapError("error"))

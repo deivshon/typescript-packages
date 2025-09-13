@@ -1,5 +1,5 @@
 import { asyncFn, errAsync, fromSafePromise, ResultAsync } from "./async"
-import { throwErrorUnwrapError, throwValueUnwrapError } from "./errors"
+import { throwErrorResultUnwrapError, throwValueResultUnwrapError } from "./errors"
 import { identity, syncCatchAndIgnore } from "./internal/utils"
 
 export interface $Result<T, E> {
@@ -54,7 +54,7 @@ export const ok = <const T>(value: T): Ok<T, never> => {
         unwrapOr: extract,
         unwrapOrFrom: extract,
         dangerouslyUnwrap: extract,
-        dangerouslyUnwrapErr: throwValueUnwrapError,
+        dangerouslyUnwrapErr: throwValueResultUnwrapError,
     }
 }
 
@@ -81,7 +81,7 @@ export const err = <const E>(error: E): Err<never, E> => {
         },
         unwrapOr: identity,
         unwrapOrFrom: apply,
-        dangerouslyUnwrap: throwErrorUnwrapError,
+        dangerouslyUnwrap: throwErrorResultUnwrapError,
         dangerouslyUnwrapErr: extract,
     }
 }
