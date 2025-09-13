@@ -1,7 +1,7 @@
 import { NoFunctions } from "@deivshon/types-toolkit"
 
-export const id = Symbol.for("@deivshon/react-store.Store.id")
-export const iteration = Symbol.for("@deivshon/react-store.Store.iteration")
+export const id = Symbol.for("@deivshon/store.Store.id")
+export const iteration = Symbol.for("@deivshon/store.Store.iteration")
 
 type $Contents<TState extends Record<string, unknown>, TDerived extends Record<string, unknown>> = TState &
     TDerived & {
