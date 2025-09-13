@@ -1,1 +1,1 @@
-export { persist } from "./persist"
+export { persistAtom, persistStore } from "./persist"

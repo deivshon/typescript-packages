@@ -1,3 +1,4 @@
+export { createAtom, type Atom, type AtomState } from "./atom"
 export { memoizedSelector } from "./selector"
 export { shallowEq } from "./shallow"
 export {

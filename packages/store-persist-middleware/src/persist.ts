@@ -1,12 +1,11 @@
 import { Serializer } from "@deivshon/serialization"
 import { AsyncStorage, Storage, StorageInstance, SyncStorage } from "@deivshon/storage"
-import { Middleware, Store } from "@deivshon/store"
-import { NoFunctions } from "@deivshon/types-toolkit"
+import { AtomState, Middleware, Store } from "@deivshon/store"
 
-export const persist = <TState extends Record<string, unknown>>(
+export const persistStore = <TState extends Record<string, unknown>>(
     name: string,
     persistence: {
-        [TKey in keyof NoFunctions<TState>]?: [
+        [TKey in keyof TState]?: [
             ((initial: TState[TKey]) => Serializer<TState[TKey]>) | Serializer<TState[TKey]>,
             StorageInstance,
         ]
@@ -227,3 +226,12 @@ export const persist = <TState extends Record<string, unknown>>(
 
 const normalizeSerializer = <T>(raw: ((initial: T) => Serializer<T>) | Serializer<T>, initial: T): Serializer<T> =>
     raw instanceof Function ? raw(initial) : raw
+
+export const persistAtom = <T>(
+    name: string,
+    serializer: Serializer<T>,
+    storage: StorageInstance,
+): Middleware<AtomState<T>> =>
+    persistStore<AtomState<T>>(name, {
+        value: [serializer, storage],
+    })

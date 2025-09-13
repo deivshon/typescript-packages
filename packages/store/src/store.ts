@@ -1,5 +1,3 @@
-import { NoFunctions } from "@deivshon/types-toolkit"
-
 export const id = Symbol.for("@deivshon/store.Store.id")
 export const iteration = Symbol.for("@deivshon/store.Store.iteration")
 
@@ -16,9 +14,7 @@ export type Store<
     readonly [id]: Record<PropertyKey, never>
     readonly get: () => Readonly<$Contents<TState, TDerived>>
     readonly set: (
-        update:
-            | Partial<NoFunctions<TState>>
-            | ((prev: Readonly<$Contents<TState, TDerived>>) => Partial<NoFunctions<TState>>),
+        update: Partial<TState> | ((prev: Readonly<$Contents<TState, TDerived>>) => Partial<TState>),
         meta?: Partial<Record<symbol, unknown>>,
     ) => void
     readonly subscribe: (callback: (state: Readonly<$Contents<TState, TDerived>>) => void) => () => void
@@ -32,11 +28,11 @@ export type Middleware<TState extends Record<string, unknown>> = {
     readonly transformInitial?: (state: Readonly<TState>) => TState
     readonly onInit?: (state: Readonly<TState>, set: Store<TState, Record<string, unknown>>["set"]) => void
     readonly transformUpdate?: (
-        update: Readonly<Partial<NoFunctions<TState>>>,
+        update: Readonly<Partial<TState>>,
         meta: Partial<Record<symbol, unknown>>,
-    ) => Partial<NoFunctions<TState>>
+    ) => Partial<TState>
     readonly onUpdate?: (
-        update: Readonly<Partial<NoFunctions<TState>>>,
+        update: Readonly<Partial<TState>>,
         newState: Readonly<TState>,
         meta: Partial<Record<symbol, unknown>>,
     ) => void

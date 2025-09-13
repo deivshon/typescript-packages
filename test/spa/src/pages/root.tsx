@@ -1,8 +1,10 @@
-import { shallowEq } from "@deivshon/react-store"
+import { shallowEq, useAtom } from "@deivshon/react-store"
 import * as React from "react"
 import { Link, useSearchParams } from "react-router"
 import { useGlobalStore } from "../lib/global-store"
 import { usePersistedStore } from "../lib/persist-store"
+import { persistedAtom } from "../lib/persisted-atom"
+import { simpleAtom } from "../lib/simple-atom"
 import { simpleStoreStringSelector, useSimpleStore } from "../lib/simple-store"
 
 export const RootPage = () => {
@@ -25,6 +27,14 @@ export const RootPage = () => {
             </p>
             React Router url count {searchParams.get("rr-count")}
             <button onClick={onReactRouterCountIncrease}>Increment</button>
+            <div style={{ display: "flex", gap: "1rem" }}>
+                <RootSimpleAtom />
+                <RootSimpleAtom />
+                <RootSimpleAtom />
+                <RootPersistedAtom />
+                <RootPersistedAtom />
+                <RootPersistedAtom />
+            </div>
             <h1>{title.title}</h1>
             <p>{description}</p>
             <RootPageCounter />
@@ -230,6 +240,32 @@ const RootPageNumberMap = () => {
             </span>
             <button type="button" onClick={randomizeNumberMap} style={{ width: "fit-content" }}>
                 Randomize number map
+            </button>
+        </div>
+    )
+}
+
+export const RootSimpleAtom = () => {
+    const [value, setValue] = useAtom(simpleAtom)
+
+    return (
+        <div style={columnStyle}>
+            <span>Atom simple value: {value}</span>
+            <button type="button" onClick={() => setValue(value + 1)} style={{ width: "fit-content" }}>
+                Increment simple atom
+            </button>
+        </div>
+    )
+}
+
+export const RootPersistedAtom = () => {
+    const [value, setValue] = useAtom(persistedAtom)
+
+    return (
+        <div style={columnStyle}>
+            <span>Persisted atom value: {value}</span>
+            <button type="button" onClick={() => setValue(value + 1)} style={{ width: "fit-content" }}>
+                Increment persisted atom
             </button>
         </div>
     )

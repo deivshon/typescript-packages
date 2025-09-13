@@ -1,7 +1,7 @@
 import { createStore, createStoreHook } from "@deivshon/react-store"
 import { boolean, date, map, nullable, number, schema, set, string } from "@deivshon/serialization"
 import { idb, local, session, url } from "@deivshon/storage"
-import { persist } from "@deivshon/store-persist-middleware"
+import { persistStore } from "@deivshon/store-persist-middleware"
 import { type } from "arktype"
 import { makeRandomMovie, movieSchema, type Movie } from "./schema/movie"
 import { defaultProfile, makeRandomProfile, profileSchema, type Profile } from "./schema/profile"
@@ -89,7 +89,7 @@ const persistedStore = createStore<PersistedStore>(
         randomizeNumberSet: () => set(randomNumberSet()),
     }),
     [
-        persist("persisted-store", {
+        persistStore<PersistedStore>("persisted-store", {
             local1: [number, local()],
             local2: [string, local()],
             local3: [boolean, local()],

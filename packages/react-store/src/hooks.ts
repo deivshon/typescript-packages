@@ -1,4 +1,4 @@
-import { Store } from "@deivshon/store"
+import { Atom, Store } from "@deivshon/store"
 import { useRef, useSyncExternalStore } from "react"
 
 const useStore = <TState extends Record<string, unknown>, TDerived extends Record<string, unknown>, TSelected>(
@@ -28,4 +28,16 @@ export const createStoreHook = <TState extends Record<string, unknown>, TDerived
     ) => useStore(store, selector, eq)
 
     return Object.assign<typeof useStoreHook, Store<TState, TDerived>>(useStoreHook, store)
+}
+
+export const useAtom = <TValue>(
+    atom: Atom<TValue>,
+    eq: (prev: Readonly<TValue>, current: Readonly<TValue>) => boolean = Object.is,
+): [TValue, (value: TValue | ((prev: TValue) => TValue)) => void] => {
+    const atomValue = useStore(atom, (state) => state.value, eq)
+    const setAtomValue = (value: TValue | ((prev: TValue) => TValue)) => {
+        atom.set({ value: value instanceof Function ? value(atomValue) : value })
+    }
+
+    return [atomValue, setAtomValue]
 }

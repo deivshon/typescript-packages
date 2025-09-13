@@ -1,2 +1,2 @@
 export * from "@deivshon/store"
-export { createStoreHook } from "./hooks"
+export { createStoreHook, useAtom } from "./hooks"
