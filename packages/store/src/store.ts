@@ -49,7 +49,7 @@ export const createStoreWithDerived = <
 >(
     initial: (set: Store<TState, TDerived>["set"]) => TState,
     derive: (state: TState) => TDerived,
-    middlewares: Array<Middleware<TState>> = [],
+    middleware: Array<Middleware<TState>> = [],
 ): Store<TState, TDerived> => {
     let state: TState
     let derived: TDerived
@@ -70,7 +70,7 @@ export const createStoreWithDerived = <
             const base = rawUpdate instanceof Function ? rawUpdate(contents) : rawUpdate
 
             let processed = base
-            for (const { transformUpdate } of middlewares) {
+            for (const { transformUpdate } of middleware) {
                 if (!transformUpdate) {
                     continue
                 }
@@ -96,7 +96,7 @@ export const createStoreWithDerived = <
             [iteration]: {},
         }
 
-        for (const { onUpdate } of middlewares) {
+        for (const { onUpdate } of middleware) {
             if (!onUpdate) {
                 continue
             }
@@ -113,7 +113,7 @@ export const createStoreWithDerived = <
         const base = initial(set)
 
         let processed = base
-        for (const { transformInitial } of middlewares) {
+        for (const { transformInitial } of middleware) {
             if (!transformInitial) {
                 continue
             }
@@ -130,7 +130,7 @@ export const createStoreWithDerived = <
         [id]: {},
         [iteration]: {},
     }
-    for (const { onInit } of middlewares) {
+    for (const { onInit } of middleware) {
         if (!onInit) {
             continue
         }
@@ -148,5 +148,5 @@ export const createStoreWithDerived = <
 
 export const createStore = <TState extends Record<string, unknown>>(
     initial: (set: Store<TState>["set"]) => TState,
-    middlewares: Array<Middleware<TState>> = [],
-) => createStoreWithDerived<TState, Record<never, never>>(initial, () => ({}), middlewares)
+    middleware: Array<Middleware<TState>> = [],
+) => createStoreWithDerived<TState, Record<never, never>>(initial, () => ({}), middleware)
