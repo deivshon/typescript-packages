@@ -5,4 +5,7 @@ export const baseTsDownConfig: Options = {
     minify: false,
     dts: true,
     format: ["esm", "cjs"],
+    inputOptions: {
+        resolve: undefined,
+    },
 }

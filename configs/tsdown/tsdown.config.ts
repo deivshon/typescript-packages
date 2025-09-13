@@ -6,4 +6,7 @@ export default defineConfig({
     dts: true,
     format: ["esm", "cjs"],
     entry: "src/index.ts",
+    inputOptions: {
+        resolve: undefined,
+    },
 })
