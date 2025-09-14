@@ -2,11 +2,19 @@ import { Serializer } from "@deivshon/serialization"
 import { AsyncStorage, Storage, StorageInstance, SyncStorage } from "@deivshon/storage"
 import { AtomState, Middleware, Store } from "@deivshon/store"
 
+type PersistenceOptions = Partial<{
+    key: string
+}>
+
+type Persistence<TState extends Record<string, unknown>> = {
+    [TKey in keyof TState]?:
+        | [Serializer<TState[TKey]>, StorageInstance]
+        | [Serializer<TState[TKey]>, StorageInstance, PersistenceOptions | undefined]
+}
+
 export const persistStore = <TState extends Record<string, unknown>>(
     name: string,
-    persistence: {
-        [TKey in keyof TState]?: [Serializer<TState[TKey]>, StorageInstance]
-    },
+    persistence: Persistence<TState>,
 ): Middleware<TState> => {
     const shouldSync = Symbol()
 
@@ -35,12 +43,13 @@ export const persistStore = <TState extends Record<string, unknown>>(
 
         const syncStoredCache = new Map<SyncStorage, Partial<Record<string, string>>>()
         const asyncStoredCache = new Map<AsyncStorage, Promise<Partial<Record<string, string>>>>()
-        for (const key in persistence) {
-            if (!persistence[key]) {
+        for (const stateKey in persistence) {
+            const persistenceData = extractFromPersistence(name, persistence, stateKey)
+            if (!persistenceData) {
                 continue
             }
 
-            const [serializer, { storage }] = persistence[key]
+            const [serializer, { storage }, { key: storedKey }] = persistenceData
             if (skipStorage(storage)) {
                 continue
             }
@@ -60,26 +69,26 @@ export const persistStore = <TState extends Record<string, unknown>>(
                 })()
 
             if (stored instanceof Promise) {
-                const computed = stored.then((values) => {
-                    if (typeof values[key] !== "string" || !initialState) {
+                const computed = stored.then((stored) => {
+                    if (typeof stored[storedKey] !== "string" || !initialState) {
                         return {}
                     }
 
-                    const deserialized = serializer.deserialize(values[key])
+                    const deserialized = serializer.deserialize(stored[storedKey])
 
                     const result: Partial<TState> = {}
-                    result[key] = deserialized.success ? deserialized.value : initialState[key]
+                    result[stateKey] = deserialized.success ? deserialized.value : initialState[stateKey]
 
                     return result
                 })
                 asyncValues.push(computed)
             } else {
-                if (typeof stored[key] !== "string") {
+                if (typeof stored[storedKey] !== "string") {
                     continue
                 }
 
-                const deserialized = serializer.deserialize(stored[key])
-                syncValues[key] = deserialized.success ? deserialized.value : initialState[key]
+                const deserialized = serializer.deserialize(stored[storedKey])
+                syncValues[stateKey] = deserialized.success ? deserialized.value : initialState[stateKey]
             }
         }
 
@@ -91,16 +100,35 @@ export const persistStore = <TState extends Record<string, unknown>>(
         }
     }
 
+    const mapToPersistenceKeys = <T>(object: Partial<Record<keyof TState, T>>): Partial<Record<string, T>> => {
+        const result: Partial<Record<string, T>> = {}
+
+        for (const objectKey in object) {
+            const persistenceData = extractFromPersistence(name, persistence, objectKey)
+            if (!persistenceData) {
+                continue
+            }
+
+            const [, , { key: storedKey }] = persistenceData
+            result[storedKey] = object[objectKey]
+        }
+
+        return result
+    }
+
     const setToStorage = (
         values: Map<
             Storage,
             {
-                update: Partial<Record<string, string>>
-                options: Partial<Record<string, StorageInstance["options"]>>
+                update: Partial<Record<keyof TState, string>>
+                options: Partial<Record<keyof TState, StorageInstance["options"]>>
             }
         >,
     ): void => {
-        for (const [storage, { update, options }] of values.entries()) {
+        for (const [storage, { update: rawUpdate, options: rawOptions }] of values.entries()) {
+            const update = mapToPersistenceKeys(rawUpdate)
+            const options = mapToPersistenceKeys(rawOptions)
+
             if (storage.type === "named") {
                 void storage.update(name, update, options)
             } else {
@@ -120,12 +148,17 @@ export const persistStore = <TState extends Record<string, unknown>>(
             }
 
             const update = { ...storageValues }
-            for (const key in persistence) {
-                if (key in storageValues || !persistence[key] || persistence[key][1].storage !== storage) {
+            for (const stateKey in persistence) {
+                if (stateKey in storageValues) {
                     continue
                 }
 
-                update[key] = initialState[key]
+                const persistenceData = extractFromPersistence(name, persistence, stateKey)
+                if (!persistenceData || persistenceData[1].storage !== storage) {
+                    continue
+                }
+
+                update[stateKey] = initialState[stateKey]
             }
 
             return update
@@ -146,12 +179,13 @@ export const persistStore = <TState extends Record<string, unknown>>(
         onInit: (_, baseSet) => {
             set = baseSet
 
-            for (const key in persistence) {
-                if (!persistence[key]) {
+            for (const stateKey in persistence) {
+                const persistenceData = extractFromPersistence(name, persistence, stateKey)
+                if (!persistenceData) {
                     continue
                 }
 
-                const [_, { storage }] = persistence[key]
+                const [, { storage }] = persistenceData
                 if (storage.type === "named" || !storage.subscribe || storageSubscriptions.get(storage)) {
                     continue
                 }
@@ -184,8 +218,8 @@ export const persistStore = <TState extends Record<string, unknown>>(
             const values = new Map<
                 Storage,
                 {
-                    update: Partial<Record<string, string>>
-                    options: Partial<Record<string, StorageInstance["options"]>>
+                    update: Partial<Record<keyof TState, string>>
+                    options: Partial<Record<keyof TState, StorageInstance["options"]>>
                 }
             >()
 
@@ -199,8 +233,10 @@ export const persistStore = <TState extends Record<string, unknown>>(
                 const [serializer, { storage, options }] = persistence[key]
                 const serialized = serializer.serialize(updatedValue)
 
-                const current = values.get(storage)
-
+                const current: {
+                    update: Partial<Record<keyof TState, string>>
+                    options: Partial<Record<keyof TState, StorageInstance["options"]>>
+                } = values.get(storage) ?? { update: {}, options: {} }
                 if (!serialized.success) {
                     continue
                 }
@@ -225,7 +261,24 @@ export const persistAtom = <T>(
     name: string,
     serializer: Serializer<T>,
     storage: StorageInstance,
+    opts?: PersistenceOptions,
 ): Middleware<AtomState<T>> =>
     persistStore<AtomState<T>>(name, {
-        value: [serializer, storage],
+        value: [serializer, storage, opts],
     })
+
+const extractFromPersistence = <TState extends Record<string, unknown>, TKey extends Extract<keyof TState, string>>(
+    name: string,
+    persistence: Persistence<TState>,
+    key: TKey,
+): [Serializer<TState[TKey]>, StorageInstance, Required<PersistenceOptions>] | null => {
+    const entry = persistence[key]
+    if (!entry) {
+        return null
+    }
+
+    const [serializer, storageInstance, opts] = entry
+
+    const storedKey = opts?.key ?? (storageInstance.storage.type === "named" ? key : `${name}-${key}`)
+    return [serializer, storageInstance, { key: storedKey }]
+}
