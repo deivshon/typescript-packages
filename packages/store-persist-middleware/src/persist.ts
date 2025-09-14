@@ -5,10 +5,7 @@ import { AtomState, Middleware, Store } from "@deivshon/store"
 export const persistStore = <TState extends Record<string, unknown>>(
     name: string,
     persistence: {
-        [TKey in keyof TState]?: [
-            ((initial: TState[TKey]) => Serializer<TState[TKey]>) | Serializer<TState[TKey]>,
-            StorageInstance,
-        ]
+        [TKey in keyof TState]?: [Serializer<TState[TKey]>, StorageInstance]
     },
 ): Middleware<TState> => {
     const shouldSync = Symbol()
@@ -68,7 +65,7 @@ export const persistStore = <TState extends Record<string, unknown>>(
                         return {}
                     }
 
-                    const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(values[key])
+                    const deserialized = serializer.deserialize(values[key])
 
                     const result: Partial<TState> = {}
                     result[key] = deserialized.success ? deserialized.value : initialState[key]
@@ -81,7 +78,7 @@ export const persistStore = <TState extends Record<string, unknown>>(
                     continue
                 }
 
-                const deserialized = normalizeSerializer(serializer, initialState[key]).deserialize(stored[key])
+                const deserialized = serializer.deserialize(stored[key])
                 syncValues[key] = deserialized.success ? deserialized.value : initialState[key]
             }
         }
@@ -200,7 +197,7 @@ export const persistStore = <TState extends Record<string, unknown>>(
                 }
 
                 const [serializer, { storage, options }] = persistence[key]
-                const serialized = normalizeSerializer(serializer, initialState[key]).serialize(updatedValue)
+                const serialized = serializer.serialize(updatedValue)
 
                 const current = values.get(storage)
 
@@ -223,9 +220,6 @@ export const persistStore = <TState extends Record<string, unknown>>(
         },
     }
 }
-
-const normalizeSerializer = <T>(raw: ((initial: T) => Serializer<T>) | Serializer<T>, initial: T): Serializer<T> =>
-    raw instanceof Function ? raw(initial) : raw
 
 export const persistAtom = <T>(
     name: string,
