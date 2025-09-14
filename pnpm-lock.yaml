@@ -49,6 +49,9 @@ importers:
       '@build/tsdown-configs':
         specifier: workspace:*
         version: link:../../configs/tsdown
+      '@deivshon/types-toolkit':
+        specifier: workspace:*
+        version: link:../types-toolkit
 
   packages/react-store:
     dependencies:

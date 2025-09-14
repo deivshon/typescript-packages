@@ -8,6 +8,7 @@
         "dev": "tsdown --watch",
         "typecheck": "tsc --noEmit",
         "typecheck:watch": "tsc --noEmit --watch",
+        "test": "vitest",
         "lint": "eslint .",
         "attw": "attw -qP ."
     },
@@ -23,7 +24,8 @@
         }
     },
     "devDependencies": {
-        "@build/tsdown-configs": "workspace:*"
+        "@build/tsdown-configs": "workspace:*",
+        "@deivshon/types-toolkit": "workspace:*"
     },
     "sideEffects": false,
     "repository": {
