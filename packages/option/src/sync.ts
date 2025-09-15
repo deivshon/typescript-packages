@@ -6,7 +6,7 @@ export interface $Option<T> {
     async: false
     map: <const M>(fn: (value: T) => M) => Option<M>
     asyncMap: <const M>(fn: (value: T) => Promise<M>) => AsyncOption<M>
-    bind: <const O extends Option<unknown>>(fn: (value: T) => O) => Option<OptionType<O>>
+    bind: <const O extends Option<unknown>>(fn: (value: T) => O) => Option<InferOptionType<O>>
     asyncBind: <const BT>(fn: (value: T) => Promise<Option<BT>> | AsyncOption<BT>) => AsyncOption<BT>
     tap: (fn: (value: T) => unknown) => Option<T>
     unwrapOr: <const O>(value: O) => T | O
@@ -23,7 +23,7 @@ export interface None<T> extends $Option<T> {
 }
 
 export type Option<T> = Some<T> | None<T>
-export type OptionType<O extends Option<unknown>> = O extends Option<infer T> ? T : never
+export type InferOptionType<O extends Option<unknown>> = O extends Option<infer T> ? T : never
 
 export const some = <const T>(value: T): Some<T> => {
     const extract = () => value
@@ -35,8 +35,8 @@ export const some = <const T>(value: T): Some<T> => {
         map: (fn) => some(fn(value)),
         asyncMap: (fn) => fromOptionPromise(fn(value).then(some)),
         bind: <O extends Option<unknown>>(fn: (value: T) => O) =>
-            // Safety: T1
-            fn(value) as Option<OptionType<O>>,
+            // SAFETY: T1
+            fn(value) as Option<InferOptionType<O>>,
         asyncBind: (fn) => asyncFn(fn)(value),
         tap: (fn) => {
             syncCatchAndIgnore(() => {

@@ -1,42 +1,45 @@
 import { Equals } from "@deivshon/types-toolkit"
 import { describe, expectTypeOf, it } from "vitest"
-import { Option, OptionType } from "./sync"
+import { InferOptionType, Option } from "./sync"
 
-type T0T = unknown
-type T0O = Option<T0T>
-
+type T0U = unknown
+type T0O = Option<T0U>
 /**
  * ```txt
- * Hypothesis:
- * - O = Option<T> for some T
+ * H1. let U
+ * H2. let O = Option<U>
  *
- * Thesis: T0 := OptionType<O> = T
+ * Thesis: T0
+ * InferOptionType<O> = U
  *
  * Proof:
- * -> OptionType<O> = T
- * -> Option<T> extends Option<infer U> ? U : never = T
- * -> Option<T> extends Option<T> ? T : never = T
- * -> T = T
+ *   InferOptionType<O>
+ * = InferOptionType<Option<U>> [H2]
+ * = Option<U> extends Option<infer S> ? S : never [InferOptionType def]
+ * = Option<U> extends Option<U> ? U : never [type inference]
+ * = U [conditional type resolution]
  * ```
  */
-type T0 = Equals<OptionType<T0O>, T0T>
+type T0 = Equals<InferOptionType<T0O>, T0U>
 
-type T1T = unknown
-type T1O = Option<T1T>
+type T1U = unknown
+type T1O = Option<T1U>
 /**
  * ```txt
- * Hypothesis:
- * - O = Option<T> for some T
+ * H1. let U
+ * H2. let O = Option<U>
  *
- * Thesis: T1 := O = Option<OptionType<O>>
+ * Thesis: T1
+ * O = Option<InferOptionType<O>>
  *
  * Proof:
- * -> O = Option<OptionType<O>>
- * -> Option<T> = Option<OptionType<Option<T>>>
- * -> Option<T> = Option<T> (T0)
+ *   Option<InferOptionType<O>>
+ * = Option<InferOptionType<Option<U>>> [H2]
+ * = Option<U> [T0]
+ * = O [H2]
  * ```
  */
-type T1 = Equals<T1O, Option<OptionType<T1O>>>
+type T1 = Equals<T1O, Option<InferOptionType<T1O>>>
 
 describe("type-level tests", () => {
     describe("T0", () => {
