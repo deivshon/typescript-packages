@@ -52,8 +52,18 @@ export const optional = <T>(serializer: Serializer<T>): Serializer<T | undefined
 
 export const set = <T>(serializer: Serializer<T>): Serializer<Set<T>> => ({
     serialize: (value) => {
+        const items: string[] = []
+        for (const item of value) {
+            const serialized = serializer.serialize(item)
+            if (!serialized.success) {
+                return err()
+            }
+
+            items.push(serialized.value)
+        }
+
         try {
-            return ok(enhancedJsonStringify(Array.from(value).map(serializer.serialize)))
+            return ok(enhancedJsonStringify(items))
         } catch {
             return err()
         }
