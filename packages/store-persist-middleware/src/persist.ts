@@ -2,25 +2,53 @@ import { Serializer } from "@deivshon/serialization"
 import { AsyncStorage, Storage, StorageInstance, SyncStorage } from "@deivshon/storage"
 import { AtomState, Middleware, Store } from "@deivshon/store"
 
-type PersistenceOptions = Partial<{
+type PersistedValueOptions = Partial<{
     key: string
 }>
 
 type Persistence<TState extends Record<string, unknown>> = {
     [TKey in keyof TState]?:
         | [Serializer<TState[TKey]>, StorageInstance]
-        | [Serializer<TState[TKey]>, StorageInstance, PersistenceOptions | undefined]
+        | [Serializer<TState[TKey]>, StorageInstance, PersistedValueOptions | undefined]
 }
+
+type PersistenceOptions<TState extends Record<string, unknown>> = Partial<{
+    onRetrieval: (stored: Partial<TState>) => void
+}>
 
 export const persistStore = <TState extends Record<string, unknown>>(
     name: string,
     persistence: Persistence<TState>,
+    options: PersistenceOptions<TState> = {},
 ): Middleware<TState> => {
     const shouldSync = Symbol()
 
     let initialState: TState | null = null
     let set: Store<TState, Record<string, unknown>>["set"] | null = null
     const storageSubscriptions = new Map<Storage, { unsubscribe: () => void }>()
+
+    const registerRetrieval = (() => {
+        const firstRetrieved = initializeFirstRetrieved(persistence)
+
+        return <TKey extends Extract<keyof TState, string>>(
+            persistenceKey: TKey,
+            retrieved: { found: true; value: TState[TKey] } | { found: false },
+        ): void => {
+            if (!firstRetrieved.missing.has(persistenceKey)) {
+                return
+            }
+
+            firstRetrieved.missing.delete(persistenceKey)
+            firstRetrieved.current = {
+                ...firstRetrieved.current,
+                ...(retrieved.found ? { [persistenceKey]: retrieved.value } : {}),
+            }
+
+            if (firstRetrieved.missing.size === 0) {
+                options.onRetrieval?.(firstRetrieved.current)
+            }
+        }
+    })()
 
     const getFromStorage = (opts: {
         storage: "all" | Storage | ((storage: Storage) => boolean)
@@ -71,24 +99,31 @@ export const persistStore = <TState extends Record<string, unknown>>(
             if (stored instanceof Promise) {
                 const computed = stored.then((stored) => {
                     if (typeof stored[storedKey] !== "string" || !initialState) {
+                        registerRetrieval(stateKey, { found: false })
                         return {}
                     }
 
                     const deserialized = serializer.deserialize(stored[storedKey])
+                    const retrieved = deserialized.success ? deserialized.value : initialState[stateKey]
 
                     const result: Partial<TState> = {}
-                    result[stateKey] = deserialized.success ? deserialized.value : initialState[stateKey]
+                    result[stateKey] = retrieved
+                    registerRetrieval(stateKey, { found: true, value: retrieved })
 
                     return result
                 })
                 asyncValues.push(computed)
             } else {
                 if (typeof stored[storedKey] !== "string") {
+                    registerRetrieval(stateKey, { found: false })
                     continue
                 }
 
                 const deserialized = serializer.deserialize(stored[storedKey])
-                syncValues[stateKey] = deserialized.success ? deserialized.value : initialState[stateKey]
+                const retrieved = deserialized.success ? deserialized.value : initialState[stateKey]
+
+                syncValues[stateKey] = retrieved
+                registerRetrieval(stateKey, { found: true, value: retrieved })
             }
         }
 
@@ -257,11 +292,31 @@ export const persistStore = <TState extends Record<string, unknown>>(
     }
 }
 
+type FirstRetrieved<TState extends Record<string, unknown>> = {
+    current: Partial<TState>
+    missing: Set<Extract<keyof TState, string>>
+}
+
+const initializeFirstRetrieved = <TState extends Record<string, unknown>>(
+    persistence: Persistence<TState>,
+): FirstRetrieved<TState> => {
+    const missing = new Set<Extract<keyof TState, string>>()
+
+    for (const stateKey in persistence) {
+        missing.add(stateKey)
+    }
+
+    return {
+        current: {},
+        missing,
+    }
+}
+
 export const persistAtom = <T>(
     name: string,
     serializer: Serializer<T>,
     storage: StorageInstance,
-    opts?: PersistenceOptions,
+    opts?: PersistedValueOptions,
 ): Middleware<AtomState<T>> =>
     persistStore<AtomState<T>>(name, {
         value: [serializer, storage, opts],
@@ -271,7 +326,7 @@ const extractFromPersistence = <TState extends Record<string, unknown>, TKey ext
     name: string,
     persistence: Persistence<TState>,
     key: TKey,
-): [Serializer<TState[TKey]>, StorageInstance, Required<PersistenceOptions>] | null => {
+): [Serializer<TState[TKey]>, StorageInstance, Required<PersistedValueOptions>] | null => {
     const entry = persistence[key]
     if (!entry) {
         return null
