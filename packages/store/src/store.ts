@@ -14,7 +14,7 @@ export type Store<
     readonly [id]: Record<PropertyKey, never>
     readonly get: () => Readonly<$Contents<TState, TDerived>>
     readonly set: (
-        update: Partial<TState> | ((prev: Readonly<$Contents<TState, TDerived>>) => Partial<TState>),
+        update: Partial<TState> | ((prevState: Readonly<TState>, prevDerived: Readonly<TDerived>) => Partial<TState>),
         meta?: Partial<Record<symbol, unknown>>,
     ) => void
     readonly subscribe: (callback: (state: Readonly<$Contents<TState, TDerived>>) => void) => () => void
@@ -63,7 +63,7 @@ export const createStoreWithDerived = <
     const get: Store<TState, TDerived>["get"] = () => contents
     const set: Store<TState, TDerived>["set"] = (rawUpdate, meta = {}) => {
         const update = (() => {
-            const base = rawUpdate instanceof Function ? rawUpdate(contents) : rawUpdate
+            const base = rawUpdate instanceof Function ? rawUpdate(state, derived) : rawUpdate
 
             let processed = base
             for (const { transformUpdate } of middleware) {
