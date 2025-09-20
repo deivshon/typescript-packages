@@ -76,7 +76,7 @@ export const createStoreWithDerived = <
 
             return processed
         })()
-        if (Object.is(update, state)) {
+        if (Object.is(update, state) || Object.keys(update).length === 0) {
             return
         }
 
