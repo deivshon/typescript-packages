@@ -23,7 +23,8 @@ export const number: Serializer<number> = {
 
 export const boolean: Serializer<boolean> = {
     serialize: (value) => ok(value ? $serialized.true : $serialized.false),
-    deserialize: (serialized) => ok(serialized === $serialized.true),
+    deserialize: (serialized) =>
+        serialized === $serialized.true ? ok(true) : serialized === $serialized.false ? ok(false) : err(),
 }
 
 export const date: Serializer<Date> = {
