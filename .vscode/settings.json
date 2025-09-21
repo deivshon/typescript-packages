@@ -4,5 +4,8 @@
     },
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
-    "eslint.validate": ["typescript", "javascript", "typescriptreact", "javascriptreact"]
+    "eslint.validate": ["typescript", "javascript", "typescriptreact", "javascriptreact"],
+    "files.associations": {
+        "*.css": "tailwindcss"
+    }
 }

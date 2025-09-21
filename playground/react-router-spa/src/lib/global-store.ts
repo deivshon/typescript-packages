@@ -13,7 +13,7 @@ type GlobalStoreDerived = {
 
 export const globalStore = createStoreWithDerived<GlobalStoreState, GlobalStoreDerived>(
     (set) => ({
-        title: "global",
+        title: "Global",
         setTitle: (title) => set({ title }),
         count: 0,
         setCount: (count) =>

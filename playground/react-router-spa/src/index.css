@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@layer base {
+    body {
+        @apply font-mono;
+    }
+    button:hover {
+        cursor: pointer;
+    }
+}
